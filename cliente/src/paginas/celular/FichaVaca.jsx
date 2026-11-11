@@ -1,12 +1,52 @@
-import { useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import Encabezado from '../../componentes/Encabezado.jsx'
+import { mostrarPalabra, normalizarCaravana } from '../../animal.js'
+import { leerCopiaRodeo, recordarVaca } from '../../cola.js'
 
 function FichaVaca() {
   const { caravana } = useParams()
+  const caravanaBuscada = normalizarCaravana(caravana)
+  const [animal, cambiarAnimal] = useState(null)
+  const [cargando, cambiarCargando] = useState(true)
+  const [aviso, cambiarAviso] = useState('')
+
+  useEffect(() => {
+    buscarVaca(caravanaBuscada)
+  }, [caravanaBuscada])
+
+  async function buscarVaca(buscada) {
+    cambiarCargando(true)
+    cambiarAviso('')
+    try {
+      const { animales } = await leerCopiaRodeo()
+      const encontrado = animales.find((guardado) => guardado.caravana === buscada) ?? null
+      cambiarAnimal(encontrado)
+      if (encontrado) {
+        recordarVaca(buscada)
+      } else {
+        cambiarAviso(`La caravana ${buscada} no está en el rodeo`)
+      }
+    } catch (error) {
+      console.error(error)
+      cambiarAviso('No se pudo leer el rodeo guardado en el celular.')
+    } finally {
+      cambiarCargando(false)
+    }
+  }
 
   return (
-    <main className="pantalla">
-      <Encabezado titulo={`Vaca ${caravana}`} />
+    <main className="pantalla ficha">
+      <Link to="/celular" className="boton boton-secundario boton-volver">Volver</Link>
+      <Encabezado titulo={caravanaBuscada} />
+      {cargando && <p className="cargando">Cargando</p>}
+      {animal && (
+        <p className="etiquetas">
+          <span className="etiqueta">{mostrarPalabra(animal.categoria)}</span>
+          <span className="etiqueta">{mostrarPalabra(animal.estado_reproductivo)}</span>
+        </p>
+      )}
+      {aviso && <p className="mensaje-aviso">{aviso}</p>}
     </main>
   )
 }

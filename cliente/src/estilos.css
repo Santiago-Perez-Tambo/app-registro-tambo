@@ -220,6 +220,161 @@ td {
   border-bottom: 1px solid var(--color-borde);
 }
 
+td:first-child {
+  border-left: 1px solid var(--color-borde);
+  border-radius: 8px 0 0 8px;
+}
+
+td:last-child {
+  border-right: 1px solid var(--color-borde);
+  border-radius: 0 8px 8px 0;
+}
+
+h2 {
+  margin: 24px 0 8px;
+  font-size: 1.25rem;
+}
+
+a.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.boton.boton-enlace {
+  width: auto;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: var(--color-texto);
+  font-size: 1rem;
+  text-decoration: underline;
+}
+
+.campo select {
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 2px solid var(--color-borde);
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: var(--color-texto);
+  font-family: inherit;
+  font-size: 1.25rem;
+}
+
+.campo-grande {
+  margin-top: 16px;
+  font-size: 1.5rem;
+}
+
+.campo-grande input {
+  min-height: 72px;
+  font-size: 1.75rem;
+}
+
+.lista-vacas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.boton.boton-vaca {
+  flex-direction: column;
+  min-height: 80px;
+}
+
+.caravana {
+  font-size: 1.75rem;
+}
+
+.nota-chica {
+  font-size: 1rem;
+}
+
+.pie-celular {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ficha .encabezado h1 {
+  font-size: 2.5rem;
+}
+
+.boton.boton-volver {
+  width: auto;
+  margin-bottom: 12px;
+}
+
+.etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.etiqueta {
+  padding: 6px 14px;
+  border: 2px solid var(--color-borde);
+  border-radius: 999px;
+  background: #FFFFFF;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.barra-rodeo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.enlace-caravana {
+  color: var(--color-accion);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.migas {
+  margin: 0 0 8px;
+}
+
+.migas a {
+  color: var(--color-accion);
+  font-weight: 700;
+}
+
+.aclaracion {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.mensaje-correcto {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-correcto);
+  color: var(--color-correcto-texto);
+  font-weight: 700;
+}
+
+.botones {
+  display: flex;
+  gap: 12px;
+}
+
 @media (max-width: 799px) {
   .pantalla {
     padding: 12px 16px;
