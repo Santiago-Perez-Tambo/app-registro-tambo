@@ -2,7 +2,28 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Encabezado from '../../componentes/Encabezado.jsx'
 import { mostrarPalabra, normalizarCaravana } from '../../animal.js'
-import { leerCopiaRodeo, recordarVaca } from '../../cola.js'
+import { buscarVacaEnCopia, recordarVaca } from '../../cola.js'
+
+function enlaceCaptura(caravana, modo) {
+  return `/celular/vaca/${encodeURIComponent(caravana)}/${modo}`
+}
+
+function DatosVaca({ animal }) {
+  return (
+    <>
+      <p className="etiquetas">
+        <span className="etiqueta">{mostrarPalabra(animal.categoria)}</span>
+        <span className="etiqueta">{mostrarPalabra(animal.estado_reproductivo)}</span>
+      </p>
+      <div className="botones-captura">
+        <Link to={enlaceCaptura(animal.caravana, 'foto')} className="boton boton-principal boton-captura">Foto</Link>
+        <Link to={enlaceCaptura(animal.caravana, 'escribir')} className="boton boton-principal boton-captura">
+          Escribir
+        </Link>
+      </div>
+    </>
+  )
+}
 
 function FichaVaca() {
   const { caravana } = useParams()
@@ -19,8 +40,7 @@ function FichaVaca() {
     cambiarCargando(true)
     cambiarAviso('')
     try {
-      const { animales } = await leerCopiaRodeo()
-      const encontrado = animales.find((guardado) => guardado.caravana === buscada) ?? null
+      const encontrado = await buscarVacaEnCopia(buscada)
       cambiarAnimal(encontrado)
       if (encontrado) {
         recordarVaca(buscada)
@@ -37,16 +57,10 @@ function FichaVaca() {
 
   return (
     <main className="pantalla ficha">
-      <Link to="/celular" className="boton boton-secundario boton-volver">Volver</Link>
-      <Encabezado titulo={caravanaBuscada} />
+      <Encabezado titulo={caravanaBuscada} volver="/celular" />
       {cargando && <p className="cargando">Cargando</p>}
-      {animal && (
-        <p className="etiquetas">
-          <span className="etiqueta">{mostrarPalabra(animal.categoria)}</span>
-          <span className="etiqueta">{mostrarPalabra(animal.estado_reproductivo)}</span>
-        </p>
-      )}
       {aviso && <p className="mensaje-aviso">{aviso}</p>}
+      {animal && <DatosVaca animal={animal} />}
     </main>
   )
 }

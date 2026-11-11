@@ -9,7 +9,7 @@ test('el tambero no entra a por confirmar', () => {
 
 test('el tambero entra a las pantallas del celular', () => {
   assert.equal(puedeEntrar('tambero', '/celular'), true)
-  assert.equal(puedeEntrar('tambero', '/celular/capturar'), true)
+  assert.equal(puedeEntrar('tambero', '/celular/vaca/A100/escribir'), true)
 })
 
 test('el propietario y el asesor entran a por confirmar', () => {
@@ -19,7 +19,13 @@ test('el propietario y el asesor entran a por confirmar', () => {
 
 test('el propietario y el asesor no entran a las pantallas del celular', () => {
   assert.equal(puedeEntrar('propietario', '/celular'), false)
-  assert.equal(puedeEntrar('asesor', '/celular/capturar'), false)
+  assert.equal(puedeEntrar('asesor', '/celular/vaca/A100/foto'), false)
+})
+
+test('el propietario y el asesor no entran a los registros guardados', () => {
+  assert.equal(puedeEntrar('propietario', '/celular/guardados'), false)
+  assert.equal(puedeEntrar('asesor', '/celular/guardados'), false)
+  assert.equal(puedeEntrar('tambero', '/celular/guardados'), true)
 })
 
 test('el asesor no entra al alta de animal', () => {

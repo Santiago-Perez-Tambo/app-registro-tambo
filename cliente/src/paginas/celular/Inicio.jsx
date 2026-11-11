@@ -4,7 +4,8 @@ import Boton from '../../componentes/Boton.jsx'
 import Encabezado from '../../componentes/Encabezado.jsx'
 import { useSenal } from '../../componentes/IndicadorSenal.jsx'
 import { buscarPorCaravana, mostrarPalabra, normalizarCaravana } from '../../animal.js'
-import { actualizarRodeo, leerCopiaRodeo, textoFechaCopia, ultimasVacas } from '../../cola.js'
+import { avisoSalirConPendientes, textoFechaCopia, textoPendientes } from '../../captura.js'
+import { actualizarRodeo, contarPendientes, leerCopiaRodeo, ultimasVacas } from '../../cola.js'
 import { useSesion } from '../../sesion.jsx'
 
 const SIN_COPIA = { animales: [], fechaCopia: null, actualizada: false }
@@ -65,11 +66,90 @@ function UltimasVacas() {
   )
 }
 
-function Inicio() {
+function BuscadorVaca({ animales }) {
+  const [texto, cambiarTexto] = useState('')
+  return (
+    <>
+      <label className="campo campo-grande">
+        ¿Qué vaca?
+        <input
+          type="text"
+          value={texto}
+          onChange={(evento) => cambiarTexto(evento.target.value)}
+          placeholder="Escribí la caravana"
+          autoComplete="off"
+          autoCapitalize="characters"
+        />
+      </label>
+      <p>Elegí la vaca para ver su ficha y registrar lo que pasó.</p>
+      <ResultadoBusqueda animales={animales} texto={texto} />
+    </>
+  )
+}
+
+function FranjaPendientes() {
+  const { usuario } = useSesion()
+  const [cantidad, cambiarCantidad] = useState(0)
+  const [aviso, cambiarAviso] = useState('')
+
+  useEffect(() => {
+    contarGuardados(usuario.id_usuario)
+  }, [usuario.id_usuario])
+
+  async function contarGuardados(idUsuario) {
+    try {
+      cambiarCantidad(await contarPendientes(idUsuario))
+    } catch (error) {
+      console.error(error)
+      cambiarAviso('No se pudieron leer los registros guardados en el celular.')
+    }
+  }
+
+  if (aviso) {
+    return <p className="mensaje-aviso">{aviso}</p>
+  }
+  if (cantidad === 0) {
+    return null
+  }
+  return (
+    <p className="franja-pendientes">
+      <span>{textoPendientes(cantidad)}</span>
+      <Link to="/celular/guardados">Ver</Link>
+    </p>
+  )
+}
+
+function PieSalir() {
   const { usuario, cerrarSesion } = useSesion()
+  const [salirIgual, cambiarSalirIgual] = useState(false)
+  const [aviso, cambiarAviso] = useState('')
+
+  async function salir() {
+    try {
+      const pendientes = await contarPendientes(usuario.id_usuario)
+      if (pendientes > 0 && !salirIgual) {
+        cambiarAviso(avisoSalirConPendientes(pendientes))
+        cambiarSalirIgual(true)
+        return
+      }
+    } catch (error) {
+      console.error(error)
+    }
+    cambiarAviso(await cerrarSesion())
+  }
+
+  return (
+    <footer className="pie-usuario pie-celular">
+      {aviso && <p className="mensaje-aviso">{aviso}</p>}
+      <p>{usuario.nombre}, {usuario.rol}</p>
+      <Boton tipo="enlace" onClick={salir}>{salirIgual ? 'Salir igual' : 'Salir'}</Boton>
+    </footer>
+  )
+}
+
+function Inicio() {
   const conSenal = useSenal()
   const [copia, cambiarCopia] = useState(SIN_COPIA)
-  const [texto, cambiarTexto] = useState('')
   const [aviso, cambiarAviso] = useState('')
 
   useEffect(() => {
@@ -87,35 +167,17 @@ function Inicio() {
     }
   }
 
-  async function salir() {
-    cambiarAviso(await cerrarSesion())
-  }
-
   const lineaCopia = lineaDeCopia(copia, conSenal)
 
   return (
     <main className="pantalla pantalla-inicio">
       <Encabezado titulo="Mi tambo" />
-      <label className="campo campo-grande">
-        ¿Qué vaca?
-        <input
-          type="text"
-          value={texto}
-          onChange={(evento) => cambiarTexto(evento.target.value)}
-          placeholder="Escribí la caravana"
-          autoComplete="off"
-          autoCapitalize="characters"
-        />
-      </label>
-      <p>Elegí la vaca para ver su ficha y registrar lo que pasó.</p>
-      <ResultadoBusqueda animales={copia.animales} texto={texto} />
+      <FranjaPendientes />
+      <BuscadorVaca animales={copia.animales} />
       <UltimasVacas />
       {lineaCopia && <p className="nota-chica">{lineaCopia}</p>}
       {aviso && <p className="mensaje-aviso">{aviso}</p>}
-      <footer className="pie-usuario pie-celular">
-        <p>{usuario.nombre}, {usuario.rol}</p>
-        <Boton tipo="enlace" onClick={salir}>Salir</Boton>
-      </footer>
+      <PieSalir />
     </main>
   )
 }

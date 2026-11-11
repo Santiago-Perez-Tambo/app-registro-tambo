@@ -51,7 +51,8 @@ function App() {
           <Route element={<RutaProtegida />}>
             <Route path="/celular" element={<Inicio />} />
             <Route path="/celular/vaca/:caravana" element={<FichaVaca />} />
-            <Route path="/celular/capturar" element={<Capturar />} />
+            <Route path="/celular/vaca/:caravana/escribir" element={<Capturar modo="texto" />} />
+            <Route path="/celular/vaca/:caravana/foto" element={<Capturar modo="foto" />} />
             <Route path="/celular/guardados" element={<Guardados />} />
             <Route path="/escritorio" element={<DisenoEscritorio />}>
               <Route index element={<Navigate to="por-confirmar" replace />} />
