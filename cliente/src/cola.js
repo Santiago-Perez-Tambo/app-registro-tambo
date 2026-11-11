@@ -7,7 +7,8 @@ base.version(1).stores({ rodeo: 'caravana' })
 const CLAVE_FECHA_COPIA = 'fecha_copia_rodeo'
 const CLAVE_ULTIMAS_VACAS = 'ultimas_vacas'
 const CANTIDAD_ULTIMAS_VACAS = 6
-const ZONA_HORARIA = 'America/Argentina/Buenos_Aires'
+const MILISEGUNDOS_POR_HORA = 60 * 60 * 1000
+const DIFERENCIA_ARGENTINA_HORAS = -3
 
 export async function leerCopiaRodeo() {
   const animales = await base.rodeo.toArray()
@@ -34,15 +35,15 @@ export async function actualizarRodeo() {
   return { ...(await leerCopiaRodeo()), actualizada }
 }
 
+function dosCifras(numero) {
+  return String(numero).padStart(2, '0')
+}
+
 export function textoFechaCopia(fechaCopia) {
-  const momento = new Date(fechaCopia)
-  const dia = momento.toLocaleDateString('es-AR', { timeZone: ZONA_HORARIA, day: '2-digit', month: '2-digit' })
-  const hora = momento.toLocaleTimeString('es-AR', {
-    timeZone: ZONA_HORARIA,
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  })
+  const horaUniversal = new Date(fechaCopia).getTime()
+  const enArgentina = new Date(horaUniversal + DIFERENCIA_ARGENTINA_HORAS * MILISEGUNDOS_POR_HORA)
+  const dia = `${dosCifras(enArgentina.getUTCDate())}/${dosCifras(enArgentina.getUTCMonth() + 1)}`
+  const hora = `${dosCifras(enArgentina.getUTCHours())}:${dosCifras(enArgentina.getUTCMinutes())}`
   return `el ${dia} a las ${hora}`
 }
 
