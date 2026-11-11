@@ -14,7 +14,10 @@ function IndicadorSenal() {
     }
   }, [])
 
-  return <p>{conSenal ? 'Con señal' : 'Sin señal'}</p>
+  if (conSenal) {
+    return <p className="senal senal-con">Con señal</p>
+  }
+  return <p className="senal senal-sin">Sin señal</p>
 }
 
 export default IndicadorSenal

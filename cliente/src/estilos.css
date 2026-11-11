@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap');
+
+:root {
+  --color-fondo: #FBF8EF;
+  --color-texto: #14201A;
+  --color-accion: #145A32;
+  --color-accion-texto: #FFFFFF;
+  --color-destacado: #FFD23F;
+  --color-destacado-texto: #000000;
+  --color-aviso: #FFF1C2;
+  --color-aviso-texto: #5C4300;
+  --color-correcto: #DDF3E4;
+  --color-correcto-texto: #0F4D2A;
+  --color-borde: #8A948C;
+  --tipografia: 'Atkinson Hyperlegible', 'Trebuchet MS', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--tipografia);
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-destacado);
+  outline-offset: 2px;
+}
+
+.pantalla {
+  padding: 16px 24px;
+}
+
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--color-borde);
+}
+
+.senal {
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.senal-con {
+  background: var(--color-correcto);
+  color: var(--color-correcto-texto);
+}
+
+.senal-sin {
+  background: var(--color-aviso);
+  color: var(--color-aviso-texto);
+}
+
+.boton {
+  min-height: 48px;
+  padding: 8px 20px;
+  border: 2px solid var(--color-borde);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.boton-principal {
+  background: var(--color-accion);
+  border-color: var(--color-accion);
+  color: var(--color-accion-texto);
+}
+
+.boton-secundario {
+  background: var(--color-fondo);
+  color: var(--color-texto);
+}
+
+.boton-destacado {
+  background: var(--color-destacado);
+  border-color: var(--color-destacado);
+  color: var(--color-destacado-texto);
+}
+
+.diseno-escritorio {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.menu-lateral {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  border-right: 2px solid var(--color-borde);
+}
+
+.menu-nombre {
+  margin: 0 0 16px;
+  font-weight: 700;
+}
+
+.enlace-menu {
+  padding: 12px;
+  border-radius: 8px;
+  color: var(--color-texto);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.enlace-activo {
+  background: var(--color-destacado);
+  color: var(--color-destacado-texto);
+}
+
+.menu-lateral .boton {
+  margin-top: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+th {
+  padding: 8px 12px;
+  text-align: left;
+}
+
+td {
+  padding: 12px;
+  background: #FFFFFF;
+  border-top: 1px solid var(--color-borde);
+  border-bottom: 1px solid var(--color-borde);
+}
+
+@media (max-width: 799px) {
+  .pantalla {
+    padding: 12px 16px;
+  }
+
+  .boton {
+    width: 100%;
+    min-height: 64px;
+    font-size: 1.25rem;
+  }
+
+  .boton-principal {
+    min-height: 96px;
+    font-size: 1.5rem;
+  }
+}
