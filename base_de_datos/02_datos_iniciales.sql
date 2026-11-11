@@ -8,4 +8,8 @@ INSERT INTO usuario (id_establecimiento, nombre, correo, rol, id_auth)
 SELECT 1, 'Tambero', email, 'tambero', id
 FROM auth.users WHERE email = 'CORREO_TAMBERO';
 
+INSERT INTO usuario (id_establecimiento, nombre, correo, rol, id_auth)
+SELECT 1, 'Asesor', email, 'asesor', id
+FROM auth.users WHERE email = 'CORREO_ASESOR';
+
 SELECT id_usuario, nombre, rol, correo FROM usuario;

@@ -129,8 +129,77 @@ h1 {
   color: var(--color-destacado-texto);
 }
 
-.menu-lateral .boton {
+.pie-usuario {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: auto;
+  padding-top: 16px;
+  font-size: 1rem;
+}
+
+.pie-usuario p {
+  margin: 0;
+}
+
+.pantalla-inicio {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.cargando {
+  padding: 24px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.subtitulo {
+  margin: 12px 0 0;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 420px;
+  margin-top: 24px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.campo input {
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 2px solid var(--color-borde);
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: var(--color-texto);
+  font-family: inherit;
+  font-size: 1.25rem;
+}
+
+.mensaje-aviso {
+  width: 100%;
+  margin: 0;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--color-aviso);
+  color: var(--color-aviso-texto);
+  font-weight: 700;
+}
+
+.pie-ingreso {
+  max-width: 420px;
+  margin-top: 24px;
+  font-size: 1rem;
 }
 
 table {
