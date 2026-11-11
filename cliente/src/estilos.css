@@ -284,6 +284,7 @@ a.boton {
 .boton.boton-vaca {
   flex-direction: column;
   min-height: 80px;
+  text-align: center;
 }
 
 .caravana {

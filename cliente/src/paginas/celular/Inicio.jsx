@@ -2,18 +2,24 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Boton from '../../componentes/Boton.jsx'
 import Encabezado from '../../componentes/Encabezado.jsx'
+import { useSenal } from '../../componentes/IndicadorSenal.jsx'
 import { buscarPorCaravana, mostrarPalabra, normalizarCaravana } from '../../animal.js'
 import { actualizarRodeo, leerCopiaRodeo, textoFechaCopia, ultimasVacas } from '../../cola.js'
 import { useSesion } from '../../sesion.jsx'
 
-function lineaDeCopia(copia) {
-  if (copia.actualizada) {
+const SIN_COPIA = { animales: [], fechaCopia: null, actualizada: false }
+
+function lineaDeCopia(copia, conSenal) {
+  if (conSenal && copia.actualizada) {
     return ''
   }
   if (copia.fechaCopia) {
     return `Rodeo guardado en el celular ${textoFechaCopia(copia.fechaCopia)}`
   }
-  return 'Todavía no hay rodeo guardado en el celular. La primera vez hace falta señal.'
+  if (!conSenal) {
+    return 'Todavía no hay rodeo guardado en el celular. La primera vez hace falta señal.'
+  }
+  return ''
 }
 
 function enlaceVaca(caravana) {
@@ -61,22 +67,20 @@ function UltimasVacas() {
 
 function Inicio() {
   const { usuario, cerrarSesion } = useSesion()
-  const [animales, cambiarAnimales] = useState([])
+  const conSenal = useSenal()
+  const [copia, cambiarCopia] = useState(SIN_COPIA)
   const [texto, cambiarTexto] = useState('')
-  const [lineaCopia, cambiarLineaCopia] = useState('')
   const [aviso, cambiarAviso] = useState('')
 
   useEffect(() => {
     cargarRodeo()
-  }, [])
+  }, [conSenal])
 
   async function cargarRodeo() {
     try {
-      const guardado = await leerCopiaRodeo()
-      cambiarAnimales(guardado.animales)
-      const copia = await actualizarRodeo()
-      cambiarAnimales(copia.animales)
-      cambiarLineaCopia(lineaDeCopia(copia))
+      const guardada = await leerCopiaRodeo()
+      cambiarCopia({ ...guardada, actualizada: false })
+      cambiarCopia(await actualizarRodeo())
     } catch (error) {
       console.error(error)
       cambiarAviso('No se pudo leer el rodeo guardado en el celular.')
@@ -86,6 +90,8 @@ function Inicio() {
   async function salir() {
     cambiarAviso(await cerrarSesion())
   }
+
+  const lineaCopia = lineaDeCopia(copia, conSenal)
 
   return (
     <main className="pantalla pantalla-inicio">
@@ -102,7 +108,7 @@ function Inicio() {
         />
       </label>
       <p>Elegí la vaca para ver su ficha y registrar lo que pasó.</p>
-      <ResultadoBusqueda animales={animales} texto={texto} />
+      <ResultadoBusqueda animales={copia.animales} texto={texto} />
       <UltimasVacas />
       {lineaCopia && <p className="nota-chica">{lineaCopia}</p>}
       {aviso && <p className="mensaje-aviso">{aviso}</p>}

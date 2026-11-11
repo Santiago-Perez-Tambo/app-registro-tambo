@@ -7,6 +7,7 @@ base.version(1).stores({ rodeo: 'caravana' })
 const CLAVE_FECHA_COPIA = 'fecha_copia_rodeo'
 const CLAVE_ULTIMAS_VACAS = 'ultimas_vacas'
 const CANTIDAD_ULTIMAS_VACAS = 6
+const ZONA_HORARIA = 'America/Argentina/Buenos_Aires'
 
 export async function leerCopiaRodeo() {
   const animales = await base.rodeo.toArray()
@@ -35,8 +36,13 @@ export async function actualizarRodeo() {
 
 export function textoFechaCopia(fechaCopia) {
   const momento = new Date(fechaCopia)
-  const dia = momento.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
-  const hora = momento.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  const dia = momento.toLocaleDateString('es-AR', { timeZone: ZONA_HORARIA, day: '2-digit', month: '2-digit' })
+  const hora = momento.toLocaleTimeString('es-AR', {
+    timeZone: ZONA_HORARIA,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
   return `el ${dia} a las ${hora}`
 }
 
