@@ -91,7 +91,7 @@ function VistaFoto({ foto, abrirCamara }) {
   if (!foto || !vistaPrevia) {
     return (
       <button type="button" className="boton boton-destacado boton-captura" onClick={abrirCamara}>
-        Abrir la cámara
+        Sacar o elegir foto
       </button>
     )
   }
@@ -134,7 +134,7 @@ function ModoFoto({ foto, cambiarFoto, cambiarAviso }) {
     <section className="captura">
       <h2>Sacá la foto</h2>
       <p>Por ejemplo, la hoja del cuaderno o la planilla del veterinario.</p>
-      <input ref={entradaFoto} type="file" accept="image/*" capture="environment" hidden onChange={recibirFoto} />
+      <input ref={entradaFoto} type="file" accept="image/*" hidden onChange={recibirFoto} />
       {preparando && <p className="cargando">Preparando la foto</p>}
       <VistaFoto foto={foto} abrirCamara={abrirCamara} />
     </section>
