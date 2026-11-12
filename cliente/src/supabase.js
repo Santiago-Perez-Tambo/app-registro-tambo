@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
-import { mensajeCaravanaRepetida, normalizarCaravana } from './animal.js'
+import { esCaravanaRepetida, mensajeCaravanaRepetida, normalizarCaravana } from './animal.js'
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_KEY)
-const CODIGO_DATO_REPETIDO = '23505'
 
 export function escucharCambiosDeSesion(alCambiar) {
   const { data } = supabase.auth.onAuthStateChange(alCambiar)
@@ -35,7 +34,18 @@ export async function buscarFilaUsuario(idAuth) {
   return data
 }
 
+export async function leerTokenVigente() {
+  const { data, error } = await supabase.auth.getSession()
+  if (error) {
+    throw error
+  }
+  return data.session?.access_token ?? null
+}
+
 export async function leerRodeo() {
+  if (!(await leerTokenVigente())) {
+    throw new Error('No hay sesión vigente')
+  }
   const { data, error } = await supabase
     .from('animal')
     .select('id_animal, caravana, categoria, estado_reproductivo, fecha_nacimiento, fecha_ingreso, id_madre')
@@ -86,7 +96,7 @@ export async function altaAnimal(datos, idEstablecimiento) {
     fecha_ingreso: datos.fecha_ingreso || null,
     id_madre: idMadre,
   })
-  if (error?.code === CODIGO_DATO_REPETIDO) {
+  if (esCaravanaRepetida(error)) {
     throw errorDeCampo('caravana', mensajeCaravanaRepetida(caravana))
   }
   if (error) {

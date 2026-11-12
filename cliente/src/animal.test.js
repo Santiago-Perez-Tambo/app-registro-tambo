@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   buscarPorCaravana,
+  esCaravanaRepetida,
   formatearFecha,
   mensajeCaravanaRepetida,
   mostrarPalabra,
@@ -33,6 +34,12 @@ test('el alta rechaza un estado fuera de la lista y una madre igual a la cría',
     'La madre no puede ser el mismo animal.',
   )
   assert.equal(validarAlta({ caravana: 'A183', categoria: 'ternera', madre: 'A011' }), '')
+})
+
+test('el error de dato repetido de la base se reconoce como caravana repetida', () => {
+  assert.equal(esCaravanaRepetida({ code: '23505' }), true)
+  assert.equal(esCaravanaRepetida({ code: '23503' }), false)
+  assert.equal(esCaravanaRepetida(null), false)
 })
 
 test('el aviso de caravana repetida nombra la caravana', () => {

@@ -6,9 +6,16 @@ import {
   rutaDelArchivo,
   esArchivoRepetido,
   esCapturaRepetida,
+  puedeCapturar,
+  esTokenRechazado,
 } from './captura.js'
 
 const ID_CAPTURA = '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b'
+const UNA_HORA = 60 * 60 * 1000
+
+function dentroDe(milisegundos) {
+  return ahoraArgentina(new Date(Date.now() + milisegundos))
+}
 
 function capturaDeTexto(cambios) {
   return {
@@ -65,6 +72,48 @@ test('una fecha con otra forma se rechaza', () => {
     validarCaptura(capturaDeTexto({ fecha_hora: '11/11/2026 08:15' })),
     'La fecha de la captura no es válida',
   )
+})
+
+test('una fecha que no existe en el calendario o en el reloj se rechaza', () => {
+  for (const fecha of ['2026-02-30T08:15:00', '2026-13-01T08:15:00', '2026-11-11T25:00:00', '2026-11-11T08:60:00']) {
+    assert.equal(validarCaptura(capturaDeTexto({ fecha_hora: fecha })), 'La fecha de la captura no es válida')
+  }
+})
+
+test('una fecha de más de un día adelantada se rechaza', () => {
+  assert.equal(
+    validarCaptura(capturaDeTexto({ fecha_hora: dentroDe(25 * UNA_HORA) })),
+    'La fecha de la captura está adelantada. Revisá la hora del celular.',
+  )
+})
+
+test('una fecha adelantada menos de un día por el reloj del celular se acepta', () => {
+  assert.equal(validarCaptura(capturaDeTexto({ fecha_hora: dentroDe(23 * UNA_HORA) })), null)
+  assert.equal(validarCaptura(capturaDeTexto({ fecha_hora: dentroDe(0) })), null)
+})
+
+test('el tambero, el propietario y el asesor pueden capturar', () => {
+  assert.equal(puedeCapturar('tambero'), true)
+  assert.equal(puedeCapturar('propietario'), true)
+  assert.equal(puedeCapturar('asesor'), true)
+})
+
+test('un rol vacío o desconocido no puede capturar', () => {
+  for (const rol of [undefined, null, '', 'visitante', 'Tambero']) {
+    assert.equal(puedeCapturar(rol), false)
+  }
+})
+
+test('un token que Supabase rechaza se reconoce como rechazado', () => {
+  assert.equal(esTokenRechazado({ status: 401 }), true)
+  assert.equal(esTokenRechazado({ status: 403 }), true)
+})
+
+test('un error sin status o de Supabase caído no es un token rechazado', () => {
+  assert.equal(esTokenRechazado({}), false)
+  assert.equal(esTokenRechazado({ status: 0 }), false)
+  assert.equal(esTokenRechazado({ status: 500 }), false)
+  assert.equal(esTokenRechazado({ status: 503 }), false)
 })
 
 test('un tipo de captura desconocido se rechaza', () => {

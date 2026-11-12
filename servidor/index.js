@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { supabase } from './supabase.js'
-import { exigirUsuario } from './autenticacion.js'
+import { exigirPermisoDeCaptura, exigirUsuario } from './autenticacion.js'
 import {
   ahoraArgentina,
   validarCaptura,
@@ -12,6 +12,7 @@ import {
 } from './captura.js'
 
 const DEPOSITO_CAPTURAS = 'capturas'
+const TAMANO_MAXIMO_PEDIDO = '8mb'
 const origenPermitido = process.env.ORIGEN_PERMITIDO
 const puerto = process.env.PORT || 3000
 
@@ -63,50 +64,61 @@ async function guardarCaptura(datos, usuario, archivo) {
   throw error
 }
 
-async function recibirCaptura(req, res) {
-  const datos = req.body ?? {}
+async function recibirCaptura(pedido, respuesta) {
+  const datos = pedido.body ?? {}
   const errorDeDatos = validarCaptura(datos)
   if (errorDeDatos) {
-    return res.status(400).json({ error: errorDeDatos })
+    return respuesta.status(400).json({ error: errorDeDatos })
   }
   try {
-    const { id_establecimiento } = req.usuario
+    const { id_establecimiento } = pedido.usuario
     if (!(await animalEsDelEstablecimiento(datos.id_animal, id_establecimiento))) {
-      return res.status(403).json({ error: 'Ese animal no es de tu establecimiento' })
+      return respuesta.status(403).json({ error: 'Ese animal no es de tu establecimiento' })
     }
     let archivo = null
     if (datos.tipo_captura === 'foto') {
       archivo = rutaDelArchivo(id_establecimiento, datos.id_captura)
       await subirFoto(archivo, datos.archivo_base64)
     }
-    res.json(await guardarCaptura(datos, req.usuario, archivo))
+    respuesta.json(await guardarCaptura(datos, pedido.usuario, archivo))
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: 'No se pudo guardar la captura' })
+    respuesta.status(500).json({ error: 'No se pudo guardar la captura' })
   }
 }
 
-function responderPedidoConError(error, req, res, next) {
+function responderRutaInexistente(pedido, respuesta) {
+  respuesta.status(404).json({ error: 'Ruta no encontrada' })
+}
+
+function responderPedidoConError(error, pedido, respuesta, seguir) {
   console.error(error)
   if (error.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'La captura es demasiado grande' })
+    return respuesta.status(413).json({ error: 'La captura es demasiado grande' })
   }
   if (error.type === 'entity.parse.failed') {
-    return res.status(400).json({ error: 'La captura no se pudo leer' })
+    return respuesta.status(400).json({ error: 'La captura no se pudo leer' })
   }
-  res.status(500).json({ error: 'Error en el servidor' })
+  respuesta.status(500).json({ error: 'Error en el servidor' })
 }
 
 const app = express()
+app.disable('x-powered-by')
 app.use(cors({ origin: origenPermitido }))
-app.use(express.json({ limit: '8mb' }))
 
-app.get('/salud', (req, res) => {
-  res.json({ ok: true, hora: ahoraArgentina() })
+app.get('/salud', (pedido, respuesta) => {
+  respuesta.json({ ok: true, hora: ahoraArgentina() })
 })
 
-app.post('/sync', exigirUsuario, recibirCaptura)
+app.post(
+  '/sync',
+  exigirUsuario,
+  exigirPermisoDeCaptura,
+  express.json({ limit: TAMANO_MAXIMO_PEDIDO }),
+  recibirCaptura,
+)
 
+app.use(responderRutaInexistente)
 app.use(responderPedidoConError)
 
 app.listen(puerto, () => {

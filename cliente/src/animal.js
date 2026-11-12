@@ -1,6 +1,7 @@
 export const CATEGORIAS = ['ternera', 'vaquillona', 'vaca en ordeñe', 'vaca seca']
 export const ESTADOS = ['vacía', 'servida sin tacto', 'preñada']
 const LARGO_MAXIMO_CARAVANA = 20
+const CODIGO_DATO_REPETIDO = '23505'
 
 export function normalizarCaravana(texto) {
   return (texto ?? '').trim().toUpperCase()
@@ -24,6 +25,10 @@ export function validarAlta(datos) {
     return 'La madre no puede ser el mismo animal.'
   }
   return ''
+}
+
+export function esCaravanaRepetida(error) {
+  return error?.code === CODIGO_DATO_REPETIDO
 }
 
 export function mensajeCaravanaRepetida(caravana) {

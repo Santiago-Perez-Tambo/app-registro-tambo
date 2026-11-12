@@ -3,6 +3,8 @@ const TAMANO_MAXIMO_FOTO = 5 * 1024 * 1024
 const INICIO_JPEG = Buffer.from([0xff, 0xd8, 0xff])
 const FORMA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const FORMA_FECHA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
+const TOLERANCIA_RELOJ = 24 * 60 * 60 * 1000
+const ROLES_QUE_CAPTURAN = ['tambero', 'propietario', 'asesor']
 
 const FORMATO_ARGENTINA = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Argentina/Cordoba',
@@ -23,8 +25,36 @@ export function ahoraArgentina(fecha = new Date()) {
   return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}:${partes.second}`
 }
 
+export function puedeCapturar(rol) {
+  return ROLES_QUE_CAPTURAN.includes(rol)
+}
+
+export function esTokenRechazado(error) {
+  return error.status >= 400 && error.status < 500
+}
+
 function tieneForma(valor, forma) {
   return typeof valor === 'string' && forma.test(valor)
+}
+
+function esFechaReal(fechaHora) {
+  const fecha = new Date(`${fechaHora}Z`)
+  return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 19) === fechaHora
+}
+
+function estaAdelantada(fechaHora) {
+  const limite = ahoraArgentina(new Date(Date.now() + TOLERANCIA_RELOJ))
+  return fechaHora > limite
+}
+
+function validarFechaHora(fechaHora) {
+  if (!tieneForma(fechaHora, FORMA_FECHA_HORA) || !esFechaReal(fechaHora)) {
+    return 'La fecha de la captura no es válida'
+  }
+  if (estaAdelantada(fechaHora)) {
+    return 'La fecha de la captura está adelantada. Revisá la hora del celular.'
+  }
+  return null
 }
 
 function validarTexto(texto) {
@@ -63,8 +93,9 @@ export function validarCaptura(datos) {
   if (!Number.isInteger(datos.id_animal)) {
     return 'Falta el animal de la captura'
   }
-  if (!tieneForma(datos.fecha_hora, FORMA_FECHA_HORA)) {
-    return 'La fecha de la captura no es válida'
+  const errorDeFecha = validarFechaHora(datos.fecha_hora)
+  if (errorDeFecha) {
+    return errorDeFecha
   }
   if (datos.tipo_captura === 'texto') {
     return validarTexto(datos.texto)
