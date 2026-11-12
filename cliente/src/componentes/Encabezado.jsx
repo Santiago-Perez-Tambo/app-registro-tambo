@@ -5,10 +5,11 @@ import IndicadorSenal from './IndicadorSenal.jsx'
 function Encabezado({ titulo, volver }) {
   const { pathname, state } = useLocation()
   const navegar = useNavigate()
-  const [aviso] = useState(state?.aviso)
+  const [aviso, cambiarAviso] = useState(state?.aviso)
 
   useEffect(() => {
     if (state?.aviso) {
+      cambiarAviso(state.aviso)
       navegar(pathname, { replace: true })
     }
   }, [state, pathname, navegar])

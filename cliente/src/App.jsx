@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import EnvioAutomatico from './componentes/EnvioAutomatico.jsx'
 import MenuLateral from './componentes/MenuLateral.jsx'
 import Ingreso from './paginas/Ingreso.jsx'
 import Capturar from './paginas/celular/Capturar.jsx'
@@ -45,6 +46,7 @@ function App() {
   return (
     <SesionProveedor>
       <BrowserRouter>
+        <EnvioAutomatico />
         <Routes>
           <Route path="/" element={<Navigate to="/ingreso" replace />} />
           <Route path="/ingreso" element={<Ingreso />} />

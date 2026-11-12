@@ -1,10 +1,11 @@
 import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { pantallaInicial } from './permisos.js'
-import { buscarFilaUsuario, entrarConCorreo, escucharCambiosDeSesion, salirDeSupabase } from './supabase.js'
+import { buscarFilaUsuario, cerrarSesionLocal, entrarConCorreo, escucharCambiosDeSesion, salirDeSupabase } from './supabase.js'
 
 const ContextoSesion = createContext(null)
 const CLAVE_USUARIO = 'usuario'
+const AVISO_SESION_VENCIDA = 'La sesión venció. Entrá de nuevo; los registros guardados siguen en el celular.'
 
 function leerUsuarioGuardado() {
   try {
@@ -81,6 +82,17 @@ export function SesionProveedor({ children }) {
     cambiarAviso('Tu usuario no está habilitado en el establecimiento')
   }
 
+  async function salirPorSesionVencida() {
+    try {
+      await cerrarSesionLocal()
+    } catch (error) {
+      console.error(error)
+    }
+    borrarUsuarioGuardado()
+    cambiarUsuario(null)
+    cambiarAviso(AVISO_SESION_VENCIDA)
+  }
+
   async function iniciarSesion(correo, contrasena) {
     cambiarAviso('')
     try {
@@ -111,7 +123,7 @@ export function SesionProveedor({ children }) {
   }
 
   return (
-    <ContextoSesion.Provider value={{ usuario, aviso, iniciarSesion, cerrarSesion }}>
+    <ContextoSesion.Provider value={{ usuario, aviso, iniciarSesion, cerrarSesion, salirPorSesionVencida }}>
       {children}
     </ContextoSesion.Provider>
   )

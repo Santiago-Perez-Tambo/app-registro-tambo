@@ -1,6 +1,7 @@
 import Dexie from 'dexie'
-import { ahoraArgentina } from './captura.js'
-import { leerRodeo } from './supabase.js'
+import { ahoraArgentina, ordenarPorFechaHora, queHacerConLaRespuesta, siguienteParaEnviar } from './captura.js'
+import { enviarCaptura } from './servidor.js'
+import { leerRodeo, leerTokenVigente, renovarToken } from './supabase.js'
 
 const base = new Dexie('registro_tambo')
 base.version(1).stores({ rodeo: 'caravana' })
@@ -12,6 +13,10 @@ base.version(2).stores({
 const CLAVE_FECHA_COPIA = 'fecha_copia_rodeo'
 const CLAVE_ULTIMAS_VACAS = 'ultimas_vacas'
 const CANTIDAD_ULTIMAS_VACAS = 6
+
+let vueltaEnCurso = false
+let estadoEnvio = { enCurso: false, idEnviando: null, resumen: null }
+const escuchas = new Set()
 
 export async function pedirAlmacenamientoPersistente() {
   try {
@@ -83,14 +88,114 @@ export async function guardarCaptura({ idUsuario, animal, tipoCaptura, texto, ar
   return captura.id_captura
 }
 
-export function listarPendientes(idUsuario) {
-  return base.capturas.where('id_usuario').equals(idUsuario).sortBy('fecha_hora')
+export async function listarPendientes(idUsuario) {
+  return ordenarPorFechaHora(await base.capturas.where('id_usuario').equals(idUsuario).toArray())
 }
 
 export function contarPendientes(idUsuario) {
   return base.capturas.where('id_usuario').equals(idUsuario).count()
 }
 
-export function borrarCaptura(idCaptura) {
+function borrarCaptura(idCaptura) {
   return base.capturas.delete(idCaptura)
+}
+
+function guardarMotivo(idCaptura, motivo) {
+  return base.capturas.update(idCaptura, { motivo })
+}
+
+export function escucharEnvio(alCambiar) {
+  escuchas.add(alCambiar)
+  alCambiar({ ...estadoEnvio, resumen: null })
+  return () => {
+    escuchas.delete(alCambiar)
+  }
+}
+
+function avisar(cambios) {
+  estadoEnvio = { ...estadoEnvio, ...cambios }
+  for (const alCambiar of escuchas) {
+    alCambiar(estadoEnvio)
+  }
+}
+
+async function mandarYDecidir(captura, token) {
+  const { status, cuerpo } = await enviarCaptura(captura, token)
+  return queHacerConLaRespuesta(status, cuerpo)
+}
+
+async function enviarUna(captura, token) {
+  const primera = await mandarYDecidir(captura, token)
+  if (primera.accion !== 'renovarToken') {
+    return { ...primera, token }
+  }
+  const tokenNuevo = await renovarToken()
+  if (!tokenNuevo) {
+    return { accion: 'sesionVencida' }
+  }
+  const segunda = await mandarYDecidir(captura, tokenNuevo)
+  if (segunda.accion === 'renovarToken') {
+    return { accion: 'sesionVencida' }
+  }
+  return { ...segunda, token: tokenNuevo }
+}
+
+async function aplicarDecision(captura, decision) {
+  if (decision.accion === 'borrar') {
+    await borrarCaptura(captura.id_captura)
+    return 1
+  }
+  if (decision.accion === 'guardarMotivo') {
+    await guardarMotivo(captura.id_captura, decision.motivo)
+  }
+  return 0
+}
+
+async function buscarSiguiente(idUsuario, intentadas, incluirConMotivo) {
+  return siguienteParaEnviar(await listarPendientes(idUsuario), intentadas, incluirConMotivo)
+}
+
+async function recorrerCola(idUsuario, token, incluirConMotivo) {
+  const intentadas = new Set()
+  let enviadas = 0
+  let tokenActual = token
+  let captura = await buscarSiguiente(idUsuario, intentadas, incluirConMotivo)
+  while (captura) {
+    intentadas.add(captura.id_captura)
+    avisar({ idEnviando: captura.id_captura })
+    const decision = await enviarUna(captura, tokenActual)
+    if (decision.accion === 'cortar' || decision.accion === 'sesionVencida') {
+      return { enviadas, cortada: decision.accion === 'cortar', sesionVencida: decision.accion === 'sesionVencida' }
+    }
+    enviadas += await aplicarDecision(captura, decision)
+    tokenActual = decision.token
+    avisar({ idEnviando: null })
+    captura = await buscarSiguiente(idUsuario, intentadas, incluirConMotivo)
+  }
+  return { enviadas, cortada: false, sesionVencida: false }
+}
+
+async function vueltaConToken(idUsuario, incluirConMotivo) {
+  const token = await leerTokenVigente()
+  if (!token) {
+    return { enviadas: 0, cortada: false, sesionVencida: true }
+  }
+  return recorrerCola(idUsuario, token, incluirConMotivo)
+}
+
+export async function enviarCola(idUsuario, incluirConMotivo) {
+  if (vueltaEnCurso || !navigator.onLine) {
+    return
+  }
+  vueltaEnCurso = true
+  avisar({ enCurso: true, resumen: null })
+  let resumen = { enviadas: 0, cortada: true, sesionVencida: false }
+  try {
+    resumen = await vueltaConToken(idUsuario, incluirConMotivo)
+  } catch (error) {
+    console.error(error)
+  } finally {
+    vueltaEnCurso = false
+    avisar({ enCurso: false, idEnviando: null, resumen })
+  }
 }

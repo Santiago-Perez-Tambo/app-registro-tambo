@@ -3,13 +3,34 @@ import { test } from 'node:test'
 import {
   ahoraArgentina,
   avisoSalirConPendientes,
+  camposParaEnviar,
   contadorLetras,
   describirCuando,
   describirTipo,
+  ordenarPorFechaHora,
+  queHacerConLaRespuesta,
+  quitarPrefijoBase64,
+  resumenDeVuelta,
+  siguienteParaEnviar,
   textoFechaCopia,
   textoPendientes,
   validarTexto,
 } from './captura.js'
+
+function capturaEnCola(id, fechaHora, cambios) {
+  return {
+    id_captura: id,
+    id_usuario: 2,
+    id_animal: 7,
+    caravana: 'A100',
+    tipo_captura: 'texto',
+    texto: 'se sirvió con toro',
+    archivo: null,
+    fecha_hora: fechaHora,
+    estado: 'en_celular',
+    ...cambios,
+  }
+}
 
 test('la captura de las 22:30 en Argentina queda con la fecha de ese día', () => {
   assert.equal(ahoraArgentina(new Date('2026-11-12T01:30:00Z')), '2026-11-11T22:30:00')
@@ -62,4 +83,110 @@ test('el aviso al salir dice cuántos registros quedan sin enviar', () => {
     avisoSalirConPendientes(1),
     'Tenés 1 registro sin enviar en este celular. Se envían cuando vuelvas a entrar con señal.',
   )
+})
+
+test('la foto viaja sin el prefijo data del navegador', () => {
+  assert.equal(quitarPrefijoBase64('data:image/jpeg;base64,/9j/4AAQ'), '/9j/4AAQ')
+  assert.equal(quitarPrefijoBase64('/9j/4AAQ'), '/9j/4AAQ')
+})
+
+test('una captura escrita viaja solo con los campos que pide el servidor', () => {
+  const captura = capturaEnCola('c1', '2026-11-11T08:15:00', { motivo: 'La foto pasa de 5 MB' })
+  assert.deepEqual(camposParaEnviar(captura, null), {
+    id_captura: 'c1',
+    id_animal: 7,
+    tipo_captura: 'texto',
+    texto: 'se sirvió con toro',
+    fecha_hora: '2026-11-11T08:15:00',
+  })
+})
+
+test('una foto viaja con el archivo en base64 y su tipo', () => {
+  const captura = capturaEnCola('c2', '2026-11-11T08:16:00', {
+    tipo_captura: 'foto',
+    texto: null,
+    archivo: { type: 'image/jpeg' },
+  })
+  assert.deepEqual(camposParaEnviar(captura, '/9j/4AAQ'), {
+    id_captura: 'c2',
+    id_animal: 7,
+    tipo_captura: 'foto',
+    texto: null,
+    fecha_hora: '2026-11-11T08:16:00',
+    archivo_base64: '/9j/4AAQ',
+    tipo_archivo: 'image/jpeg',
+  })
+})
+
+test('la captura se borra solo cuando el servidor confirma que la recibió', () => {
+  assert.deepEqual(queHacerConLaRespuesta(200, { recibida: true }), { accion: 'borrar' })
+  assert.deepEqual(queHacerConLaRespuesta(200, { recibida: true, repetida: true }), { accion: 'borrar' })
+  assert.deepEqual(queHacerConLaRespuesta(200, {}), { accion: 'cortar' })
+  assert.deepEqual(queHacerConLaRespuesta(200, null), { accion: 'cortar' })
+})
+
+test('con la sesión rechazada se pide un token nuevo', () => {
+  assert.deepEqual(queHacerConLaRespuesta(401, { error: 'Sesión inválida' }), { accion: 'renovarToken' })
+})
+
+test('lo que el servidor no acepta queda en la cola con su motivo', () => {
+  assert.deepEqual(queHacerConLaRespuesta(400, { error: 'La fecha de la captura no es válida' }), {
+    accion: 'guardarMotivo',
+    motivo: 'La fecha de la captura no es válida',
+  })
+  assert.deepEqual(queHacerConLaRespuesta(403, { error: 'Ese animal no es de tu establecimiento' }), {
+    accion: 'guardarMotivo',
+    motivo: 'Ese animal no es de tu establecimiento',
+  })
+  assert.deepEqual(queHacerConLaRespuesta(413, null), {
+    accion: 'guardarMotivo',
+    motivo: 'El servidor no aceptó el registro',
+  })
+})
+
+test('sin red, con el servidor caído o con una ruta mal escrita se corta la vuelta sin tocar nada', () => {
+  for (const status of [0, 500, 502, 503, 404]) {
+    assert.deepEqual(queHacerConLaRespuesta(status, null), { accion: 'cortar' })
+  }
+})
+
+test('la cola se ordena por fecha y hora de la captura', () => {
+  const capturas = [
+    capturaEnCola('c3', '2026-11-11T09:00:00'),
+    capturaEnCola('c1', '2026-11-10T18:30:00'),
+    capturaEnCola('c2', '2026-11-11T08:15:00'),
+  ]
+  assert.deepEqual(ordenarPorFechaHora(capturas).map((captura) => captura.id_captura), ['c1', 'c2', 'c3'])
+  assert.equal(capturas[0].id_captura, 'c3')
+})
+
+test('la siguiente en salir es la más vieja que no se intentó en esta vuelta', () => {
+  const capturas = [capturaEnCola('c2', '2026-11-11T08:15:00'), capturaEnCola('c1', '2026-11-11T08:00:00')]
+  assert.equal(siguienteParaEnviar(capturas, new Set(), false).id_captura, 'c1')
+  assert.equal(siguienteParaEnviar(capturas, new Set(['c1']), false).id_captura, 'c2')
+  assert.equal(siguienteParaEnviar(capturas, new Set(['c1', 'c2']), false), null)
+  assert.equal(siguienteParaEnviar([], new Set(), false), null)
+})
+
+test('la vuelta automática saltea las que tienen motivo y enviar ahora las incluye', () => {
+  const capturas = [
+    capturaEnCola('c1', '2026-11-11T08:00:00', { motivo: 'La foto pasa de 5 MB' }),
+    capturaEnCola('c2', '2026-11-11T08:15:00'),
+  ]
+  assert.equal(siguienteParaEnviar(capturas, new Set(), false).id_captura, 'c2')
+  assert.equal(siguienteParaEnviar(capturas, new Set(), true).id_captura, 'c1')
+})
+
+test('el resumen de la vuelta dice cuántos se enviaron y si se cortó', () => {
+  assert.equal(resumenDeVuelta({ enviadas: 3, cortada: false }), 'Se enviaron 3 registros.')
+  assert.equal(resumenDeVuelta({ enviadas: 1, cortada: false }), 'Se envió 1 registro.')
+  assert.equal(
+    resumenDeVuelta({ enviadas: 0, cortada: true }),
+    'No se pudo enviar. Se vuelve a intentar solo cuando haya señal.',
+  )
+  assert.equal(
+    resumenDeVuelta({ enviadas: 2, cortada: true }),
+    'Se enviaron 2 registros. No se pudo enviar. Se vuelve a intentar solo cuando haya señal.',
+  )
+  assert.equal(resumenDeVuelta({ enviadas: 0, cortada: false }), '')
 })

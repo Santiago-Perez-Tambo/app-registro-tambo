@@ -5,7 +5,7 @@ import Encabezado from '../../componentes/Encabezado.jsx'
 import { useSenal } from '../../componentes/IndicadorSenal.jsx'
 import { buscarPorCaravana, mostrarPalabra, normalizarCaravana } from '../../animal.js'
 import { avisoSalirConPendientes, textoFechaCopia, textoPendientes } from '../../captura.js'
-import { actualizarRodeo, contarPendientes, leerCopiaRodeo, ultimasVacas } from '../../cola.js'
+import { actualizarRodeo, contarPendientes, escucharEnvio, leerCopiaRodeo, ultimasVacas } from '../../cola.js'
 import { useSesion } from '../../sesion.jsx'
 
 const SIN_COPIA = { animales: [], fechaCopia: null, actualizada: false }
@@ -93,17 +93,16 @@ function FranjaPendientes() {
   const [aviso, cambiarAviso] = useState('')
 
   useEffect(() => {
-    contarGuardados(usuario.id_usuario)
-  }, [usuario.id_usuario])
-
-  async function contarGuardados(idUsuario) {
-    try {
-      cambiarCantidad(await contarPendientes(idUsuario))
-    } catch (error) {
-      console.error(error)
-      cambiarAviso('No se pudieron leer los registros guardados en el celular.')
+    async function contarGuardados() {
+      try {
+        cambiarCantidad(await contarPendientes(usuario.id_usuario))
+      } catch (error) {
+        console.error(error)
+        cambiarAviso('No se pudieron leer los registros guardados en el celular.')
+      }
     }
-  }
+    return escucharEnvio(contarGuardados)
+  }, [usuario.id_usuario])
 
   if (aviso) {
     return <p className="mensaje-aviso">{aviso}</p>

@@ -4,7 +4,7 @@ import Boton from '../../componentes/Boton.jsx'
 import Encabezado from '../../componentes/Encabezado.jsx'
 import { mostrarPalabra, normalizarCaravana } from '../../animal.js'
 import { contadorLetras, LARGO_MAXIMO_TEXTO, validarTexto } from '../../captura.js'
-import { buscarVacaEnCopia, guardarCaptura } from '../../cola.js'
+import { buscarVacaEnCopia, enviarCola, guardarCaptura } from '../../cola.js'
 import { useSesion } from '../../sesion.jsx'
 
 const LADO_MAYOR_FOTO = 1600
@@ -168,6 +168,7 @@ function FormularioCaptura({ modo, animal }) {
     try {
       await guardarCaptura({ idUsuario: usuario.id_usuario, animal, ...datosDeCaptura(modo, texto, foto) })
       cambiarGuardado(true)
+      enviarCola(usuario.id_usuario, false)
     } catch (error) {
       console.error(error)
       cambiarAviso('No se pudo guardar en el celular. Probá de nuevo.')

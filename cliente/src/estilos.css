@@ -509,11 +509,38 @@ a.boton {
   background: #FFFFFF;
 }
 
-.etiqueta-celular {
+.etiqueta-estado {
   margin-left: auto;
+  font-size: 1rem;
+}
+
+.etiqueta-celular {
   background: var(--color-aviso);
   color: var(--color-aviso-texto);
+}
+
+.etiqueta-enviando {
+  background: var(--color-destacado);
+  color: var(--color-destacado-texto);
+}
+
+.etiqueta-enviado {
+  background: var(--color-correcto);
+  color: var(--color-correcto-texto);
+}
+
+.motivo {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-aviso-texto);
   font-size: 1rem;
+}
+
+.separador-enviados {
+  margin: 8px 0 0;
+  padding-top: 16px;
+  border-top: 2px solid var(--color-borde);
+  font-size: 1.25rem;
 }
 
 @media (max-width: 799px) {

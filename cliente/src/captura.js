@@ -16,6 +16,10 @@ const NOMBRES_DE_TIPO = {
   foto: 'Foto',
 }
 
+const ESTADOS_CON_MOTIVO = [400, 403, 413]
+const MOTIVO_SIN_DETALLE = 'El servidor no aceptó el registro'
+const AVISO_ENVIO_CORTADO = 'No se pudo enviar. Se vuelve a intentar solo cuando haya señal.'
+
 export function ahoraArgentina(fecha = new Date()) {
   const partes = {}
   for (const parte of FORMATO_ARGENTINA.formatToParts(fecha)) {
@@ -80,4 +84,60 @@ export function textoPendientes(cantidad) {
 export function avisoSalirConPendientes(cantidad) {
   const registros = cantidad === 1 ? '1 registro' : `${cantidad} registros`
   return `Tenés ${registros} sin enviar en este celular. Se envían cuando vuelvas a entrar con señal.`
+}
+
+export function quitarPrefijoBase64(textoDataUrl) {
+  return textoDataUrl.slice(textoDataUrl.indexOf(',') + 1)
+}
+
+export function camposParaEnviar(captura, archivoBase64) {
+  const campos = {
+    id_captura: captura.id_captura,
+    id_animal: captura.id_animal,
+    tipo_captura: captura.tipo_captura,
+    texto: captura.texto,
+    fecha_hora: captura.fecha_hora,
+  }
+  if (captura.tipo_captura !== 'foto') {
+    return campos
+  }
+  return { ...campos, archivo_base64: archivoBase64, tipo_archivo: captura.archivo.type }
+}
+
+export function queHacerConLaRespuesta(status, cuerpo) {
+  if (status === 200 && cuerpo?.recibida === true) {
+    return { accion: 'borrar' }
+  }
+  if (status === 401) {
+    return { accion: 'renovarToken' }
+  }
+  if (ESTADOS_CON_MOTIVO.includes(status)) {
+    return { accion: 'guardarMotivo', motivo: cuerpo?.error ?? MOTIVO_SIN_DETALLE }
+  }
+  return { accion: 'cortar' }
+}
+
+export function ordenarPorFechaHora(capturas) {
+  return [...capturas].sort((una, otra) => una.fecha_hora.localeCompare(otra.fecha_hora))
+}
+
+export function siguienteParaEnviar(capturas, intentadas, incluirConMotivo) {
+  const candidatas = capturas.filter(
+    (captura) => !intentadas.has(captura.id_captura) && (incluirConMotivo || !captura.motivo),
+  )
+  return ordenarPorFechaHora(candidatas)[0] ?? null
+}
+
+export function resumenDeVuelta({ enviadas, cortada }) {
+  const partes = []
+  if (enviadas === 1) {
+    partes.push('Se envió 1 registro.')
+  }
+  if (enviadas > 1) {
+    partes.push(`Se enviaron ${enviadas} registros.`)
+  }
+  if (cortada) {
+    partes.push(AVISO_ENVIO_CORTADO)
+  }
+  return partes.join(' ')
 }
