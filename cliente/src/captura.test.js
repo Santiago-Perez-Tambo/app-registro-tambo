@@ -7,10 +7,12 @@ import {
   contadorLetras,
   describirCuando,
   describirTipo,
+  ordenarDeMasNuevaAMasVieja,
   ordenarPorFechaHora,
   queHacerConLaRespuesta,
   quitarPrefijoBase64,
   resumenDeVuelta,
+  sacarLasQueSiguenEnCola,
   siguienteParaEnviar,
   textoFechaCopia,
   textoPendientes,
@@ -158,6 +160,23 @@ test('la cola se ordena por fecha y hora de la captura', () => {
   ]
   assert.deepEqual(ordenarPorFechaHora(capturas).map((captura) => captura.id_captura), ['c1', 'c2', 'c3'])
   assert.equal(capturas[0].id_captura, 'c3')
+})
+
+test('en pantalla los registros de hoy quedan arriba de los de ayer', () => {
+  const capturas = [
+    capturaEnCola('c1', '2026-11-10T18:30:00'),
+    capturaEnCola('c3', '2026-11-11T09:00:00'),
+    capturaEnCola('c2', '2026-11-11T08:15:00'),
+  ]
+  assert.deepEqual(ordenarDeMasNuevaAMasVieja(capturas).map((captura) => captura.id_captura), ['c3', 'c2', 'c1'])
+  assert.equal(capturas[0].id_captura, 'c1')
+})
+
+test('una captura que sigue en la cola no aparece en enviados hoy', () => {
+  const enviados = [capturaEnCola('c1', '2026-11-11T08:00:00'), capturaEnCola('c2', '2026-11-11T08:15:00')]
+  const pendientes = [capturaEnCola('c2', '2026-11-11T08:15:00'), capturaEnCola('c3', '2026-11-11T09:00:00')]
+  assert.deepEqual(sacarLasQueSiguenEnCola(enviados, pendientes).map((captura) => captura.id_captura), ['c1'])
+  assert.deepEqual(sacarLasQueSiguenEnCola(enviados, []).map((captura) => captura.id_captura), ['c1', 'c2'])
 })
 
 test('la siguiente en salir es la más vieja que no se intentó en esta vuelta', () => {

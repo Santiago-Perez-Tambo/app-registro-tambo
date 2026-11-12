@@ -174,6 +174,9 @@ function Inicio() {
       <FranjaPendientes />
       <BuscadorVaca animales={copia.animales} />
       <UltimasVacas />
+      <p>
+        <Link to="/celular/guardados" className="boton boton-enlace">Registros guardados</Link>
+      </p>
       {lineaCopia && <p className="nota-chica">{lineaCopia}</p>}
       {aviso && <p className="mensaje-aviso">{aviso}</p>}
       <PieSalir />

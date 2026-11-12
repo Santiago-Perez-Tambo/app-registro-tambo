@@ -499,8 +499,8 @@ a.boton {
 }
 
 .fila-guardado {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
   gap: 8px 16px;
   align-items: center;
   padding: 12px;
@@ -510,7 +510,8 @@ a.boton {
 }
 
 .etiqueta-estado {
-  margin-left: auto;
+  grid-column: 1 / -1;
+  justify-self: end;
   font-size: 1rem;
 }
 
@@ -530,7 +531,7 @@ a.boton {
 }
 
 .motivo {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   margin: 0;
   color: var(--color-aviso-texto);
   font-size: 1rem;

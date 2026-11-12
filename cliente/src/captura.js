@@ -121,6 +121,15 @@ export function ordenarPorFechaHora(capturas) {
   return [...capturas].sort((una, otra) => una.fecha_hora.localeCompare(otra.fecha_hora))
 }
 
+export function ordenarDeMasNuevaAMasVieja(capturas) {
+  return ordenarPorFechaHora(capturas).reverse()
+}
+
+export function sacarLasQueSiguenEnCola(enviados, pendientes) {
+  const idsEnCola = new Set(pendientes.map((captura) => captura.id_captura))
+  return enviados.filter((captura) => !idsEnCola.has(captura.id_captura))
+}
+
 export function siguienteParaEnviar(capturas, intentadas, incluirConMotivo) {
   const candidatas = capturas.filter(
     (captura) => !intentadas.has(captura.id_captura) && (incluirConMotivo || !captura.motivo),

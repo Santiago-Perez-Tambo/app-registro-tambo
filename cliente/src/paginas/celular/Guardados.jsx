@@ -3,7 +3,14 @@ import { Link } from 'react-router-dom'
 import Boton from '../../componentes/Boton.jsx'
 import Encabezado from '../../componentes/Encabezado.jsx'
 import { useSenal } from '../../componentes/IndicadorSenal.jsx'
-import { ahoraArgentina, describirCuando, describirTipo, resumenDeVuelta } from '../../captura.js'
+import {
+  ahoraArgentina,
+  describirCuando,
+  describirTipo,
+  ordenarDeMasNuevaAMasVieja,
+  resumenDeVuelta,
+  sacarLasQueSiguenEnCola,
+} from '../../captura.js'
 import { enviarCola, escucharEnvio, listarPendientes } from '../../cola.js'
 import { useSesion } from '../../sesion.jsx'
 import { leerEnviadosHoy } from '../../supabase.js'
@@ -27,16 +34,16 @@ function FilaGuardado({ captura, estado, ahora }) {
   )
 }
 
-function ListaPendientes({ idUsuario, ahora }) {
-  const [capturas, cambiarCapturas] = useState([])
+function ListasGuardados({ idUsuario, ahora, conSenal }) {
+  const [pendientes, cambiarPendientes] = useState([])
   const [idEnviando, cambiarIdEnviando] = useState(null)
   const [cargando, cambiarCargando] = useState(true)
   const [aviso, cambiarAviso] = useState('')
 
   useEffect(() => {
-    async function cargarCapturas() {
+    async function cargarPendientes() {
       try {
-        cambiarCapturas(await listarPendientes(idUsuario))
+        cambiarPendientes(await listarPendientes(idUsuario))
         cambiarAviso('')
       } catch (error) {
         console.error(error)
@@ -47,26 +54,29 @@ function ListaPendientes({ idUsuario, ahora }) {
     }
     return escucharEnvio((estado) => {
       cambiarIdEnviando(estado.idEnviando)
-      cargarCapturas()
+      cargarPendientes()
     })
   }, [idUsuario])
 
   if (cargando) {
     return <p className="cargando">Cargando</p>
   }
-  if (aviso) {
-    return <p className="mensaje-aviso">{aviso}</p>
-  }
-  return <FilasPendientes capturas={capturas} idEnviando={idEnviando} ahora={ahora} />
+  return (
+    <>
+      {aviso && <p className="mensaje-aviso">{aviso}</p>}
+      {!aviso && <ListaPendientes capturas={pendientes} idEnviando={idEnviando} ahora={ahora} />}
+      <ListaEnviadosHoy idUsuario={idUsuario} ahora={ahora} conSenal={conSenal} pendientes={pendientes} />
+    </>
+  )
 }
 
-function FilasPendientes({ capturas, idEnviando, ahora }) {
+function ListaPendientes({ capturas, idEnviando, ahora }) {
   if (capturas.length === 0) {
     return <p>No hay registros guardados en el celular.</p>
   }
   return (
     <ul className="lista-guardados">
-      {capturas.map((captura) => (
+      {ordenarDeMasNuevaAMasVieja(capturas).map((captura) => (
         <FilaGuardado
           key={captura.id_captura}
           captura={captura}
@@ -78,7 +88,7 @@ function FilasPendientes({ capturas, idEnviando, ahora }) {
   )
 }
 
-function ListaEnviadosHoy({ idUsuario, ahora, conSenal }) {
+function ListaEnviadosHoy({ idUsuario, ahora, conSenal, pendientes }) {
   const [enviados, cambiarEnviados] = useState([])
   const [aviso, cambiarAviso] = useState('')
 
@@ -109,7 +119,7 @@ function ListaEnviadosHoy({ idUsuario, ahora, conSenal }) {
   if (aviso) {
     return <p className="mensaje-aviso">{aviso}</p>
   }
-  return <SeccionEnviados enviados={enviados} ahora={ahora} />
+  return <SeccionEnviados enviados={sacarLasQueSiguenEnCola(enviados, pendientes)} ahora={ahora} />
 }
 
 function SeccionEnviados({ enviados, ahora }) {
@@ -120,7 +130,7 @@ function SeccionEnviados({ enviados, ahora }) {
     <section>
       <h2 className="separador-enviados">Enviados hoy</h2>
       <ul className="lista-guardados">
-        {enviados.map((captura) => (
+        {ordenarDeMasNuevaAMasVieja(enviados).map((captura) => (
           <FilaGuardado key={captura.id_captura} captura={captura} estado="enviado" ahora={ahora} />
         ))}
       </ul>
@@ -169,8 +179,7 @@ function Guardados() {
       <Encabezado titulo="Registros guardados" volver="/celular" />
       <p>Se envían solos cuando hay señal. Hasta entonces quedan en el celular.</p>
       <ResumenDeVuelta />
-      <ListaPendientes idUsuario={usuario.id_usuario} ahora={ahora} />
-      <ListaEnviadosHoy idUsuario={usuario.id_usuario} ahora={ahora} conSenal={conSenal} />
+      <ListasGuardados idUsuario={usuario.id_usuario} ahora={ahora} conSenal={conSenal} />
       <BotonesGuardados idUsuario={usuario.id_usuario} conSenal={conSenal} />
     </main>
   )
