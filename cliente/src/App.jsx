@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import EnvioAutomatico from './componentes/EnvioAutomatico.jsx'
 import MenuLateral from './componentes/MenuLateral.jsx'
@@ -13,6 +14,7 @@ import PorConfirmar from './paginas/escritorio/PorConfirmar.jsx'
 import Rodeo from './paginas/escritorio/Rodeo.jsx'
 import { pantallaInicial, puedeEntrar } from './permisos.js'
 import { SesionProveedor, useSesion } from './sesion.jsx'
+import { contarPorConfirmar } from './supabase.js'
 
 function RutaProtegida() {
   const { usuario } = useSesion()
@@ -34,10 +36,24 @@ function RutaProtegida() {
 }
 
 function DisenoEscritorio() {
+  const [cantidadPorConfirmar, cambiarCantidadPorConfirmar] = useState(0)
+
+  useEffect(() => {
+    contarAlEntrar()
+  }, [])
+
+  async function contarAlEntrar() {
+    try {
+      cambiarCantidadPorConfirmar(await contarPorConfirmar())
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   return (
     <div className="diseno-escritorio">
-      <MenuLateral />
-      <Outlet />
+      <MenuLateral cantidadPorConfirmar={cantidadPorConfirmar} />
+      <Outlet context={{ cambiarCantidadPorConfirmar }} />
     </div>
   )
 }

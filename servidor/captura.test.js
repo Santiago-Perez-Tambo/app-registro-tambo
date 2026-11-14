@@ -9,7 +9,10 @@ import {
   puedeCapturar,
   esTokenRechazado,
   esUuid,
-  puedeInterpretar,
+  puedeRevisar,
+  puedeConsultar,
+  estaPorConfirmar,
+  validarConfirmacion,
   marcarComoDato,
   leerRespuestaDelModelo,
   edadEnDias,
@@ -173,20 +176,37 @@ const PROPIETARIO = { id_usuario: 1, rol: 'propietario' }
 const ASESOR = { id_usuario: 3, rol: 'asesor' }
 const TAMBERO = { id_usuario: 2, rol: 'tambero' }
 
-test('el propietario puede volver a interpretar la captura de otro usuario', () => {
-  assert.equal(puedeInterpretar(PROPIETARIO, { id_usuario: 2 }), true)
+test('el propietario puede revisar la captura de otro usuario', () => {
+  assert.equal(puedeRevisar(PROPIETARIO, { id_usuario: 2 }), true)
 })
 
-test('el asesor puede volver a interpretar una captura propia', () => {
-  assert.equal(puedeInterpretar(ASESOR, { id_usuario: 3 }), true)
+test('el asesor puede revisar una captura propia', () => {
+  assert.equal(puedeRevisar(ASESOR, { id_usuario: 3 }), true)
 })
 
-test('el asesor no puede volver a interpretar una captura ajena', () => {
-  assert.equal(puedeInterpretar(ASESOR, { id_usuario: 2 }), false)
+test('el asesor no puede revisar una captura ajena', () => {
+  assert.equal(puedeRevisar(ASESOR, { id_usuario: 2 }), false)
 })
 
-test('el tambero no puede volver a interpretar ni sus propias capturas', () => {
-  assert.equal(puedeInterpretar(TAMBERO, { id_usuario: 2 }), false)
+test('el tambero no puede revisar ni sus propias capturas', () => {
+  assert.equal(puedeRevisar(TAMBERO, { id_usuario: 2 }), false)
+})
+
+test('el propietario y el asesor pueden consultar y el tambero no', () => {
+  assert.equal(puedeConsultar(PROPIETARIO), true)
+  assert.equal(puedeConsultar(ASESOR), true)
+  assert.equal(puedeConsultar(TAMBERO), false)
+})
+
+test('un evento sin confirmar con la captura sincronizada o interpretada está por confirmar', () => {
+  assert.equal(estaPorConfirmar({ id_usuario_confirma: null, captura: { estado: 'interpretada' } }), true)
+  assert.equal(estaPorConfirmar({ id_usuario_confirma: null, captura: { estado: 'sincronizada' } }), true)
+})
+
+test('un evento confirmado o con la captura rechazada ya no está por confirmar', () => {
+  assert.equal(estaPorConfirmar({ id_usuario_confirma: 1, captura: { estado: 'interpretada' } }), false)
+  assert.equal(estaPorConfirmar({ id_usuario_confirma: null, captura: { estado: 'rechazada' } }), false)
+  assert.equal(estaPorConfirmar({ id_usuario_confirma: null, captura: { estado: 'confirmada' } }), false)
 })
 
 test('el texto del tambero va marcado y no puede cerrar la marca', () => {
@@ -457,4 +477,104 @@ test('una caravana que no está en el rodeo se muestra como se nombró', () => {
 test('una lista de caravanas que no es lista no genera advertencia', () => {
   assert.equal(advertenciaDeCaravanas(undefined, 'A100', RODEO, 'texto'), null)
   assert.equal(advertenciaDeCaravanas('A127', 'A100', RODEO, 'texto'), null)
+})
+
+const HOY = '2026-11-14'
+
+function servicioCorregido(cambios) {
+  return {
+    tipo_evento: 'servicio',
+    fecha_evento: HOY,
+    tipo_servicio: 'inseminación',
+    toro: '512',
+    ...cambios,
+  }
+}
+
+test('un servicio completo se confirma con todos los campos de otros tipos vacíos', () => {
+  assert.deepEqual(validarConfirmacion(servicioCorregido(), HOY), {
+    evento: eventoEsperado({ fecha_evento: HOY, tipo_evento: 'servicio', tipo_servicio: 'inseminación', toro: '512' }),
+  })
+})
+
+test('sin datos o sin tipo de evento falta el tipo de evento', () => {
+  assert.deepEqual(validarConfirmacion(undefined, HOY), { error: 'Falta el tipo de evento' })
+  assert.deepEqual(validarConfirmacion(servicioCorregido({ tipo_evento: null }), HOY), {
+    error: 'Falta el tipo de evento',
+  })
+  assert.deepEqual(validarConfirmacion(servicioCorregido({ tipo_evento: 'tratamiento' }), HOY), {
+    error: 'Falta el tipo de evento',
+  })
+})
+
+test('a cada tipo le falta su dato principal', () => {
+  const casos = [
+    [{ tipo_evento: 'servicio', tipo_servicio: null }, 'Falta el tipo de servicio'],
+    [{ tipo_evento: 'tacto' }, 'Falta el resultado del tacto'],
+    [{ tipo_evento: 'secado' }, 'Falta el motivo del secado'],
+    [{ tipo_evento: 'parto' }, 'Falta el sexo del ternero'],
+  ]
+  for (const [cambios, mensaje] of casos) {
+    assert.deepEqual(validarConfirmacion(servicioCorregido(cambios), HOY), { error: mensaje })
+  }
+})
+
+test('el secado por tratamiento no se confirma', () => {
+  const secado = { tipo_evento: 'secado', fecha_evento: HOY, motivo_secado: 'tratamiento' }
+  assert.deepEqual(validarConfirmacion(secado, HOY), { error: 'Falta el motivo del secado' })
+})
+
+test('sin fecha, con una fecha imposible o posterior a hoy no se confirma', () => {
+  assert.deepEqual(validarConfirmacion(servicioCorregido({ fecha_evento: '' }), HOY), { error: 'Falta la fecha' })
+  for (const fecha of ['2026-02-30', '14/11/2026', '2026-13-01']) {
+    assert.deepEqual(validarConfirmacion(servicioCorregido({ fecha_evento: fecha }), HOY), {
+      error: 'La fecha no es válida',
+    })
+  }
+  assert.deepEqual(validarConfirmacion(servicioCorregido({ fecha_evento: '2026-11-15' }), HOY), {
+    error: 'La fecha no puede ser posterior a hoy',
+  })
+})
+
+test('el servicio sin toro se confirma con el toro vacío', () => {
+  assert.equal(validarConfirmacion(servicioCorregido({ toro: '  ' }), HOY).evento.toro, null)
+  assert.equal(validarConfirmacion(servicioCorregido({ toro: null }), HOY).evento.toro, null)
+})
+
+test('un toro de 21 letras no se confirma', () => {
+  assert.deepEqual(validarConfirmacion(servicioCorregido({ toro: 'T'.repeat(21) }), HOY), {
+    error: 'El toro puede tener hasta 20 letras',
+  })
+  assert.equal(validarConfirmacion(servicioCorregido({ toro: 'T'.repeat(20) }), HOY).evento.toro, 'T'.repeat(20))
+})
+
+function tactoCorregido(edad) {
+  return { tipo_evento: 'tacto', fecha_evento: HOY, resultado_tacto: 'preñada', edad_gestacional: edad }
+}
+
+test('un tacto preñada se confirma con la edad o sin ella', () => {
+  assert.equal(validarConfirmacion(tactoCorregido(120), HOY).evento.edad_gestacional, 120)
+  assert.equal(validarConfirmacion(tactoCorregido(1), HOY).evento.edad_gestacional, 1)
+  assert.equal(validarConfirmacion(tactoCorregido(283), HOY).evento.edad_gestacional, 283)
+  assert.equal(validarConfirmacion(tactoCorregido(null), HOY).evento.edad_gestacional, null)
+})
+
+test('una edad gestacional de 0, 284, con decimales o en texto no se confirma', () => {
+  for (const edad of [0, 284, 90.5, '90']) {
+    assert.deepEqual(validarConfirmacion(tactoCorregido(edad), HOY), {
+      error: 'La edad gestacional tiene que ser un número entero de 1 a 283 días',
+    })
+  }
+})
+
+test('un campo que no corresponde al tipo se descarta', () => {
+  const cambiadoAServicio = servicioCorregido({ resultado_tacto: 'preñada', edad_gestacional: 90, sexo_ternero: 'H' })
+  const { evento } = validarConfirmacion(cambiadoAServicio, HOY)
+  assert.equal(evento.resultado_tacto, null)
+  assert.equal(evento.edad_gestacional, null)
+  assert.equal(evento.sexo_ternero, null)
+  const tactoVacia = { ...tactoCorregido(90), resultado_tacto: 'vacía', toro: '512' }
+  assert.deepEqual(validarConfirmacion(tactoVacia, HOY), {
+    evento: eventoEsperado({ fecha_evento: HOY, tipo_evento: 'tacto', resultado_tacto: 'vacía' }),
+  })
 })

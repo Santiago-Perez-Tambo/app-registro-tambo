@@ -16,6 +16,13 @@ const permisosPorRol = {
   },
 }
 
+export function puedeRevisar(usuario, asiento) {
+  if (usuario.rol === 'propietario') {
+    return true
+  }
+  return usuario.rol === 'asesor' && asiento.id_usuario === usuario.id_usuario
+}
+
 export function pantallaInicial(rol) {
   return permisosPorRol[rol]?.inicio ?? null
 }

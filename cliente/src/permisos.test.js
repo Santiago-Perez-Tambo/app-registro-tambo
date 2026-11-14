@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { pantallaInicial, puedeEntrar } from './permisos.js'
+import { pantallaInicial, puedeEntrar, puedeRevisar } from './permisos.js'
+
+test('el propietario revisa cualquier asiento y el asesor solo los que cargó él', () => {
+  assert.equal(puedeRevisar({ id_usuario: 1, rol: 'propietario' }, { id_usuario: 2 }), true)
+  assert.equal(puedeRevisar({ id_usuario: 3, rol: 'asesor' }, { id_usuario: 3 }), true)
+  assert.equal(puedeRevisar({ id_usuario: 3, rol: 'asesor' }, { id_usuario: 2 }), false)
+  assert.equal(puedeRevisar({ id_usuario: 2, rol: 'tambero' }, { id_usuario: 2 }), false)
+})
 
 test('el tambero no entra a por confirmar', () => {
   assert.equal(puedeEntrar('tambero', '/escritorio/por-confirmar'), false)

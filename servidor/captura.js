@@ -7,6 +7,8 @@ const FORMA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9
 const FORMA_FECHA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
 const TOLERANCIA_RELOJ = 24 * 60 * 60 * 1000
 const ROLES_QUE_CAPTURAN = ['tambero', 'propietario', 'asesor']
+const ROLES_QUE_CONSULTAN = ['propietario', 'asesor']
+export const ESTADOS_POR_CONFIRMAR = ['sincronizada', 'interpretada']
 
 const FORMATO_ARGENTINA = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/Argentina/Cordoba',
@@ -124,11 +126,19 @@ export function esUuid(valor) {
   return tieneForma(valor, FORMA_UUID)
 }
 
-export function puedeInterpretar(usuario, captura) {
+export function puedeRevisar(usuario, captura) {
   if (usuario.rol === 'propietario') {
     return true
   }
   return usuario.rol === 'asesor' && captura.id_usuario === usuario.id_usuario
+}
+
+export function puedeConsultar(usuario) {
+  return ROLES_QUE_CONSULTAN.includes(usuario.rol)
+}
+
+export function estaPorConfirmar(evento) {
+  return evento.id_usuario_confirma === null && ESTADOS_POR_CONFIRMAR.includes(evento.captura?.estado)
 }
 
 export const TIPOS_DE_EVENTO = ['servicio', 'tacto', 'secado', 'parto']
@@ -394,4 +404,81 @@ export function advertenciaDeCaravanas(nombradas, caravanaElegida, caravanasDelR
     tipo_advertencia: 'otra_caravana',
     detalle: `${origen} nombra ${unirConY(otras)}; el evento quedó en ${elegida}`,
   }
+}
+
+const DATO_PRINCIPAL = {
+  servicio: { campo: 'tipo_servicio', lista: TIPOS_DE_SERVICIO },
+  tacto: { campo: 'resultado_tacto', lista: RESULTADOS_DE_TACTO },
+  secado: { campo: 'motivo_secado', lista: MOTIVOS_DE_SECADO },
+  parto: { campo: 'sexo_ternero', lista: SEXOS_DE_TERNERO },
+}
+
+function faltaDato(campo) {
+  return { error: `Falta ${NOMBRES_DE_CAMPO[campo]}` }
+}
+
+function validarFechaDelEvento(fecha, hoy) {
+  if (textoLimpio(fecha) === '') {
+    return 'Falta la fecha'
+  }
+  if (!tieneForma(fecha, FORMA_FECHA) || !esFechaReal(`${fecha}T00:00:00`)) {
+    return 'La fecha no es válida'
+  }
+  if (fecha > hoy) {
+    return 'La fecha no puede ser posterior a hoy'
+  }
+  return null
+}
+
+function leerToroConfirmado(toro) {
+  const limpio = textoLimpio(toro)
+  if (limpio.length > LARGO_MAXIMO_TORO) {
+    return { error: `El toro puede tener hasta ${LARGO_MAXIMO_TORO} letras` }
+  }
+  return { campos: { toro: limpio === '' ? null : limpio } }
+}
+
+function leerEdadConfirmada(edad) {
+  if (edad === null || edad === undefined) {
+    return { campos: { edad_gestacional: null } }
+  }
+  if (!Number.isInteger(edad) || edad < 1 || edad > DIAS_GESTACION) {
+    return { error: `La edad gestacional tiene que ser un número entero de 1 a ${DIAS_GESTACION} días` }
+  }
+  return { campos: { edad_gestacional: edad } }
+}
+
+function leerOpcionales(tipo, principal, datos) {
+  if (tipo === 'servicio') {
+    return leerToroConfirmado(datos.toro)
+  }
+  if (tipo === 'tacto' && principal === 'preñada') {
+    return leerEdadConfirmada(datos.edad_gestacional)
+  }
+  return { campos: {} }
+}
+
+export function validarConfirmacion(datos, hoy) {
+  if (!esObjeto(datos)) {
+    return faltaDato('tipo_evento')
+  }
+  const tipo = deLaLista(datos.tipo_evento, TIPOS_DE_EVENTO)
+  if (!tipo) {
+    return faltaDato('tipo_evento')
+  }
+  const errorDeFecha = validarFechaDelEvento(datos.fecha_evento, hoy)
+  if (errorDeFecha) {
+    return { error: errorDeFecha }
+  }
+  const { campo, lista } = DATO_PRINCIPAL[tipo]
+  const principal = deLaLista(datos[campo], lista)
+  if (!principal) {
+    return faltaDato(campo)
+  }
+  const opcionales = leerOpcionales(tipo, principal, datos)
+  if (opcionales.error) {
+    return { error: opcionales.error }
+  }
+  const evento = { ...eventoVacio(datos.fecha_evento), tipo_evento: tipo, [campo]: principal, ...opcionales.campos }
+  return { evento }
 }

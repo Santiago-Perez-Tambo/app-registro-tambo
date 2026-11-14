@@ -1,7 +1,15 @@
 import { createClient, isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { esCaravanaRepetida, mensajeCaravanaRepetida, normalizarCaravana } from './animal.js'
+import { armarAsiento, quedanPorConfirmar } from './asiento.js'
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_KEY)
+const ESTADOS_POR_CONFIRMAR = ['sincronizada', 'interpretada']
+const COLUMNAS_POR_CONFIRMAR = [
+  'id_captura, id_usuario, fecha_hora, tipo_captura, texto, transcripcion',
+  'animal(caravana, categoria, estado_reproductivo)',
+  'usuario(nombre, rol)',
+  'evento(id_evento, id_usuario_confirma, tipo_evento, fecha_evento, tipo_servicio, toro, resultado_tacto, edad_gestacional, motivo_secado, sexo_ternero, advertencia(id_advertencia, tipo_advertencia, detalle, resuelta))',
+].join(', ')
 
 export function escucharCambiosDeSesion(alCambiar) {
   const { data } = supabase.auth.onAuthStateChange(alCambiar)
@@ -94,6 +102,31 @@ export async function leerRodeo() {
     throw error
   }
   return data
+}
+
+export async function leerPorConfirmar() {
+  await exigirSesionVigente()
+  const { data, error } = await supabase
+    .from('captura')
+    .select(COLUMNAS_POR_CONFIRMAR)
+    .in('estado', ESTADOS_POR_CONFIRMAR)
+    .order('fecha_hora')
+  if (error) {
+    throw error
+  }
+  return quedanPorConfirmar(data).map(armarAsiento)
+}
+
+export async function contarPorConfirmar() {
+  await exigirSesionVigente()
+  const { data, error } = await supabase
+    .from('captura')
+    .select('id_captura, evento(id_usuario_confirma)')
+    .in('estado', ESTADOS_POR_CONFIRMAR)
+  if (error) {
+    throw error
+  }
+  return quedanPorConfirmar(data).length
 }
 
 function errorDeCampo(campo, mensaje) {

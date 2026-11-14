@@ -11,10 +11,16 @@ import {
   esArchivoRepetido,
   esCapturaRepetida,
   esUuid,
-  puedeInterpretar,
+  puedeRevisar,
+  puedeConsultar,
+  estaPorConfirmar,
+  validarConfirmacion,
+  ESTADOS_POR_CONFIRMAR,
 } from './captura.js'
 
 const TAMANO_MAXIMO_PEDIDO = '8mb'
+const VENCIMIENTO_ENLACE_FOTO = 5 * 60
+const AVISO_YA_REVISADO = 'Este asiento ya fue confirmado o rechazado'
 const origenPermitido = process.env.ORIGEN_PERMITIDO
 const puerto = process.env.PORT || 3000
 
@@ -108,7 +114,7 @@ async function buscarCaptura(idCaptura) {
   const { data, error } = await supabase
     .from('captura')
     .select(
-      'id_captura, id_usuario, id_animal, fecha_hora, tipo_captura, texto, archivo, animal(id_establecimiento), evento(id_usuario_confirma)',
+      'id_captura, id_usuario, id_animal, fecha_hora, tipo_captura, texto, archivo, estado, animal(id_establecimiento), evento(id_usuario_confirma)',
     )
     .eq('id_captura', idCaptura)
     .maybeSingle()
@@ -118,8 +124,13 @@ async function buscarCaptura(idCaptura) {
   return data
 }
 
-function estaConfirmada(captura) {
-  return captura.evento.some((evento) => evento.id_usuario_confirma !== null)
+function yaFueRevisada(captura) {
+  const confirmada = captura.evento.some((evento) => evento.id_usuario_confirma !== null)
+  return confirmada || !ESTADOS_POR_CONFIRMAR.includes(captura.estado)
+}
+
+function esDeOtroEstablecimiento(captura, usuario) {
+  return !captura || captura.animal?.id_establecimiento !== usuario.id_establecimiento
 }
 
 async function volverAInterpretar(pedido, respuesta) {
@@ -129,20 +140,149 @@ async function volverAInterpretar(pedido, respuesta) {
   }
   try {
     const captura = await buscarCaptura(id_captura)
-    if (!captura || captura.animal?.id_establecimiento !== pedido.usuario.id_establecimiento) {
+    if (esDeOtroEstablecimiento(captura, pedido.usuario)) {
       return respuesta.status(404).json({ error: 'No se encontró la captura' })
     }
-    if (!puedeInterpretar(pedido.usuario, captura)) {
+    if (!puedeRevisar(pedido.usuario, captura)) {
       return respuesta.status(403).json({ error: 'Tu usuario no puede volver a interpretar esta captura' })
     }
-    if (estaConfirmada(captura)) {
-      return respuesta.status(409).json({ error: 'Ese asiento ya está confirmado y no se vuelve a interpretar' })
+    if (yaFueRevisada(captura)) {
+      return respuesta.status(409).json({ error: AVISO_YA_REVISADO })
     }
     const idEvento = await interpretarCaptura(captura, null)
     respuesta.json({ interpretada: true, id_evento: idEvento })
   } catch (error) {
     console.error(error)
     respuesta.status(502).json({ error: 'No se pudo interpretar. Probá de nuevo.' })
+  }
+}
+
+async function buscarEvento(idEvento) {
+  const { data, error } = await supabase
+    .from('evento')
+    .select('id_evento, id_captura, id_usuario_confirma, animal(id_establecimiento), captura(id_usuario, estado)')
+    .eq('id_evento', idEvento)
+    .maybeSingle()
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+function leerIdEvento(texto) {
+  const numero = Number(texto)
+  return Number.isInteger(numero) && numero > 0 ? numero : null
+}
+
+async function cargarEventoParaRevisar(pedido, respuesta, seguir) {
+  const idEvento = leerIdEvento(pedido.params.id_evento)
+  try {
+    pedido.evento = idEvento ? await buscarEvento(idEvento) : null
+  } catch (error) {
+    console.error(error)
+    return respuesta.status(500).json({ error: 'No se pudo leer el asiento. Probá de nuevo.' })
+  }
+  const evento = pedido.evento
+  if (!evento?.captura || evento.animal?.id_establecimiento !== pedido.usuario.id_establecimiento) {
+    return respuesta.status(404).json({ error: 'No se encontró el asiento' })
+  }
+  if (!puedeRevisar(pedido.usuario, evento.captura)) {
+    return respuesta.status(403).json({ error: 'Tu usuario no puede confirmar ni rechazar este asiento' })
+  }
+  if (!estaPorConfirmar(evento)) {
+    return respuesta.status(409).json({ error: AVISO_YA_REVISADO })
+  }
+  seguir()
+}
+
+async function guardarConfirmacion(idEvento, evento, idUsuario) {
+  const { data, error } = await supabase
+    .from('evento')
+    .update({ ...evento, id_usuario_confirma: idUsuario, fecha_confirmacion: ahoraArgentina() })
+    .eq('id_evento', idEvento)
+    .is('id_usuario_confirma', null)
+    .select('id_evento')
+  if (error) {
+    throw error
+  }
+  return data.length > 0
+}
+
+async function cambiarEstadoDeCaptura(idCaptura, estado) {
+  const { data, error } = await supabase
+    .from('captura')
+    .update({ estado })
+    .eq('id_captura', idCaptura)
+    .in('estado', ESTADOS_POR_CONFIRMAR)
+    .select('id_captura')
+  if (error) {
+    throw error
+  }
+  return data.length > 0
+}
+
+async function resolverAdvertencias(idEvento) {
+  const { error } = await supabase.from('advertencia').update({ resuelta: true }).eq('id_evento', idEvento)
+  if (error) {
+    throw error
+  }
+}
+
+async function confirmarAsiento(pedido, respuesta) {
+  const { error, evento } = validarConfirmacion(pedido.body, ahoraArgentina().slice(0, 10))
+  if (error) {
+    return respuesta.status(400).json({ error })
+  }
+  try {
+    const { id_evento, id_captura } = pedido.evento
+    if (!(await guardarConfirmacion(id_evento, evento, pedido.usuario.id_usuario))) {
+      return respuesta.status(409).json({ error: AVISO_YA_REVISADO })
+    }
+    await cambiarEstadoDeCaptura(id_captura, 'confirmada')
+    await resolverAdvertencias(id_evento)
+    respuesta.json({ confirmado: true })
+  } catch (errorAlGuardar) {
+    console.error(errorAlGuardar)
+    respuesta.status(500).json({ error: 'No se pudo confirmar el asiento. Probá de nuevo.' })
+  }
+}
+
+async function rechazarAsiento(pedido, respuesta) {
+  try {
+    if (!(await cambiarEstadoDeCaptura(pedido.evento.id_captura, 'rechazada'))) {
+      return respuesta.status(409).json({ error: AVISO_YA_REVISADO })
+    }
+    respuesta.json({ rechazado: true })
+  } catch (error) {
+    console.error(error)
+    respuesta.status(500).json({ error: 'No se pudo rechazar el asiento. Probá de nuevo.' })
+  }
+}
+
+async function firmarEnlace(ruta) {
+  const { data, error } = await supabase.storage
+    .from(DEPOSITO_CAPTURAS)
+    .createSignedUrl(ruta, VENCIMIENTO_ENLACE_FOTO)
+  if (error) {
+    throw error
+  }
+  return data.signedUrl
+}
+
+async function darEnlaceDeFoto(pedido, respuesta) {
+  if (!puedeConsultar(pedido.usuario)) {
+    return respuesta.status(403).json({ error: 'Tu usuario no puede ver las fotos de las capturas' })
+  }
+  const { id_captura } = pedido.params
+  try {
+    const captura = esUuid(id_captura) ? await buscarCaptura(id_captura) : null
+    if (esDeOtroEstablecimiento(captura, pedido.usuario) || !captura.archivo) {
+      return respuesta.status(404).json({ error: 'No se encontró la foto' })
+    }
+    respuesta.json({ url: await firmarEnlace(captura.archivo) })
+  } catch (error) {
+    console.error(error)
+    respuesta.status(500).json({ error: 'No se pudo traer la foto. Probá de nuevo.' })
   }
 }
 
@@ -178,6 +318,18 @@ app.post(
 )
 
 app.post('/interpretar/:id_captura', exigirUsuario, volverAInterpretar)
+
+app.post(
+  '/eventos/:id_evento/confirmar',
+  exigirUsuario,
+  express.json(),
+  cargarEventoParaRevisar,
+  confirmarAsiento,
+)
+
+app.post('/eventos/:id_evento/rechazar', exigirUsuario, cargarEventoParaRevisar, rechazarAsiento)
+
+app.get('/capturas/:id_captura/foto', exigirUsuario, darEnlaceDeFoto)
 
 app.use(responderRutaInexistente)
 app.use(responderPedidoConError)

@@ -1,0 +1,9 @@
+DROP POLICY est_editar ON establecimiento;
+DROP POLICY ani_editar ON animal;
+DROP POLICY cap_estado ON captura;
+DROP POLICY eve_alta ON evento;
+DROP POLICY eve_confirmar ON evento;
+DROP POLICY adv_resolver ON advertencia;
+DROP POLICY ret_alta ON retiro_leche;
+DROP POLICY con_alta ON control_lechero;
+DROP POLICY det_alta ON control_lechero_detalle;
