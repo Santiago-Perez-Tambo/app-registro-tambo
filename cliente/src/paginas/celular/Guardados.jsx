@@ -175,7 +175,7 @@ function Guardados() {
   const ahora = ahoraArgentina()
 
   return (
-    <main className="pantalla">
+    <main className="pantalla pantalla-celular">
       <Encabezado titulo="Registros guardados" volver="/celular" />
       <p>Se envían solos cuando hay señal. Hasta entonces quedan en el celular.</p>
       <ResumenDeVuelta />

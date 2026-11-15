@@ -56,7 +56,7 @@ function FichaVaca() {
   }
 
   return (
-    <main className="pantalla ficha">
+    <main className="pantalla pantalla-celular ficha">
       <Encabezado titulo={caravanaBuscada} volver="/celular" />
       {cargando && <p className="cargando">Cargando</p>}
       {aviso && <p className="mensaje-aviso">{aviso}</p>}

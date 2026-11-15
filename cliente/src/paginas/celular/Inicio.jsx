@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import Boton from '../../componentes/Boton.jsx'
+import BotonSalir from '../../componentes/BotonSalir.jsx'
 import Encabezado from '../../componentes/Encabezado.jsx'
 import { useSenal } from '../../componentes/IndicadorSenal.jsx'
 import { buscarPorCaravana, mostrarPalabra, normalizarCaravana } from '../../animal.js'
-import { avisoSalirConPendientes, textoFechaCopia, textoPendientes } from '../../captura.js'
+import { textoFechaCopia, textoPendientes } from '../../captura.js'
 import { actualizarRodeo, contarPendientes, escucharEnvio, leerCopiaRodeo, ultimasVacas } from '../../cola.js'
+import { puedeEntrar } from '../../permisos.js'
 import { useSesion } from '../../sesion.jsx'
+import { contarPorConfirmar } from '../../supabase.js'
 
 const SIN_COPIA = { animales: [], fechaCopia: null, actualizada: false }
 
@@ -118,35 +120,42 @@ function FranjaPendientes() {
   )
 }
 
-function PieSalir() {
-  const { usuario, cerrarSesion } = useSesion()
-  const [salirIgual, cambiarSalirIgual] = useState(false)
-  const [aviso, cambiarAviso] = useState('')
+function EnlacePorConfirmar() {
+  const [cantidad, cambiarCantidad] = useState(0)
 
-  async function salir() {
+  useEffect(() => {
+    contarAlEntrar()
+  }, [])
+
+  async function contarAlEntrar() {
     try {
-      const pendientes = await contarPendientes(usuario.id_usuario)
-      if (pendientes > 0 && !salirIgual) {
-        cambiarAviso(avisoSalirConPendientes(pendientes))
-        cambiarSalirIgual(true)
-        return
-      }
+      cambiarCantidad(await contarPorConfirmar())
     } catch (error) {
       console.error(error)
     }
-    cambiarAviso(await cerrarSesion())
   }
 
   return (
+    <p>
+      <Link to="/escritorio/por-confirmar" className="boton boton-enlace">
+        {cantidad > 0 ? `Por confirmar (${cantidad})` : 'Por confirmar'}
+      </Link>
+    </p>
+  )
+}
+
+function PieSalir() {
+  const { usuario } = useSesion()
+  return (
     <footer className="pie-usuario pie-celular">
-      {aviso && <p className="mensaje-aviso">{aviso}</p>}
       <p>{usuario.nombre}, {usuario.rol}</p>
-      <Boton tipo="enlace" onClick={salir}>{salirIgual ? 'Salir igual' : 'Salir'}</Boton>
+      <BotonSalir tipo="enlace" />
     </footer>
   )
 }
 
 function Inicio() {
+  const { usuario } = useSesion()
   const conSenal = useSenal()
   const [copia, cambiarCopia] = useState(SIN_COPIA)
   const [aviso, cambiarAviso] = useState('')
@@ -167,9 +176,10 @@ function Inicio() {
   }
 
   const lineaCopia = lineaDeCopia(copia, conSenal)
+  const conMenu = puedeEntrar(usuario.rol, '/escritorio')
 
   return (
-    <main className="pantalla pantalla-inicio">
+    <main className="pantalla pantalla-celular pantalla-inicio">
       <Encabezado titulo="Mi tambo" />
       <FranjaPendientes />
       <BuscadorVaca animales={copia.animales} />
@@ -177,9 +187,10 @@ function Inicio() {
       <p>
         <Link to="/celular/guardados" className="boton boton-enlace">Registros guardados</Link>
       </p>
+      {conMenu && <EnlacePorConfirmar />}
       {lineaCopia && <p className="nota-chica">{lineaCopia}</p>}
       {aviso && <p className="mensaje-aviso">{aviso}</p>}
-      <PieSalir />
+      {!conMenu && <PieSalir />}
     </main>
   )
 }

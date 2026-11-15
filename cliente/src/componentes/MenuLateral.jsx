@@ -1,23 +1,18 @@
-import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useSesion } from '../sesion.jsx'
-import Boton from './Boton.jsx'
+import BotonSalir from './BotonSalir.jsx'
 
 function claseEnlace({ isActive }) {
   return isActive ? 'enlace-menu enlace-activo' : 'enlace-menu'
 }
 
 function MenuLateral({ cantidadPorConfirmar }) {
-  const { usuario, cerrarSesion } = useSesion()
-  const [aviso, cambiarAviso] = useState('')
-
-  async function salir() {
-    cambiarAviso(await cerrarSesion())
-  }
+  const { usuario } = useSesion()
 
   return (
     <nav className="menu-lateral">
       <p className="menu-nombre">Mi tambo</p>
+      <NavLink to="/celular" className={claseEnlace}>Registrar</NavLink>
       <NavLink to="/escritorio/por-confirmar" className={claseEnlace}>
         Por confirmar
         {cantidadPorConfirmar > 0 && <span className="cantidad-menu">{cantidadPorConfirmar}</span>}
@@ -25,9 +20,8 @@ function MenuLateral({ cantidadPorConfirmar }) {
       <NavLink to="/escritorio/avisos" className={claseEnlace}>Avisos</NavLink>
       <NavLink to="/escritorio/rodeo" className={claseEnlace}>Rodeo</NavLink>
       <div className="pie-usuario">
-        <p>{usuario.nombre}, {usuario.rol}</p>
-        {aviso && <p className="mensaje-aviso">{aviso}</p>}
-        <Boton tipo="secundario" onClick={salir}>Salir</Boton>
+        <p className="nombre-usuario">{usuario.nombre}, {usuario.rol}</p>
+        <BotonSalir tipo="secundario" />
       </div>
     </nav>
   )

@@ -1,4 +1,4 @@
-import { mostrarPalabra } from './animal.js'
+import { formatearFecha, mostrarPalabra } from './animal.js'
 import { describirTipo, ordenarDeMasNuevaAMasVieja, ordenarPorFechaHora } from './captura.js'
 
 export const DIAS_GESTACION = 283
@@ -77,14 +77,87 @@ export const FILTROS = [
   { valor: 'sin_interpretar', texto: 'Sin interpretar' },
 ]
 
-export function filtrarAsientos(asientos, filtro) {
+export const VISTA_INICIAL = { filtro: 'todos', orden: 'viejos', confirmados: false, rechazados: false }
+
+function esDeLasOpciones(valor, opciones) {
+  return opciones.some((opcion) => opcion.valor === valor)
+}
+
+export function vistaValida(guardada) {
+  if (typeof guardada !== 'object' || guardada === null) {
+    return VISTA_INICIAL
+  }
+  return {
+    filtro: esDeLasOpciones(guardada.filtro, FILTROS) ? guardada.filtro : VISTA_INICIAL.filtro,
+    orden: esDeLasOpciones(guardada.orden, ORDENES) ? guardada.orden : VISTA_INICIAL.orden,
+    confirmados: guardada.confirmados === true,
+    rechazados: guardada.rechazados === true,
+  }
+}
+
+export function estadoDelAsiento(asiento) {
+  if (asiento.estado === 'confirmada') {
+    return 'confirmado'
+  }
+  if (asiento.estado === 'rechazada') {
+    return 'rechazado'
+  }
+  return 'pendiente'
+}
+
+function pasaElFiltro(asiento, filtro) {
   if (filtro === 'propuestos') {
-    return asientos.filter((asiento) => asiento.evento !== null)
+    return asiento.evento !== null
   }
   if (filtro === 'sin_interpretar') {
-    return asientos.filter((asiento) => asiento.evento === null)
+    return asiento.evento === null
   }
-  return asientos
+  return true
+}
+
+function seMuestra(asiento, vista) {
+  const estado = estadoDelAsiento(asiento)
+  if (estado === 'confirmado') {
+    return vista.confirmados
+  }
+  if (estado === 'rechazado') {
+    return vista.rechazados
+  }
+  return pasaElFiltro(asiento, vista.filtro)
+}
+
+export function filtrarAsientos(asientos, vista) {
+  return asientos.filter((asiento) => seMuestra(asiento, vista))
+}
+
+export function contarSegunFiltro(asientos, filtro) {
+  return asientos.filter((asiento) => estadoDelAsiento(asiento) === 'pendiente' && pasaElFiltro(asiento, filtro)).length
+}
+
+export function contarSegunEstado(asientos, estado) {
+  return asientos.filter((asiento) => estadoDelAsiento(asiento) === estado).length
+}
+
+export function inicioDeLosUltimosDias(ahora, dias) {
+  const fecha = new Date(`${ahora.slice(0, 10)}T00:00:00Z`)
+  fecha.setUTCDate(fecha.getUTCDate() - dias)
+  return `${fecha.toISOString().slice(0, 10)}T00:00:00`
+}
+
+function diaYHora(fechaHora) {
+  const [, mes, dia] = fechaHora.slice(0, 10).split('-')
+  return `${dia}/${mes} ${fechaHora.slice(11, 16)}`
+}
+
+export function etiquetaDeRevision(asiento) {
+  if (estadoDelAsiento(asiento) === 'rechazado') {
+    return 'Rechazado'
+  }
+  return `Confirmado por ${asiento.evento.usuario.nombre} el ${diaYHora(asiento.evento.fecha_confirmacion)}`
+}
+
+export function franjaDeRevision(caravana, tipo) {
+  return { tipo, texto: `Asiento de ${caravana} ${tipo}` }
 }
 
 function compararPorCaravana(uno, otro) {
@@ -107,15 +180,18 @@ export function quedanPorConfirmar(filas) {
 
 export function armarAsiento(fila) {
   const evento = fila.evento[0] ?? null
+  const animal = evento?.animal ?? fila.animal
   return {
     id_captura: fila.id_captura,
     id_usuario: fila.id_usuario,
     fecha_hora: fila.fecha_hora,
     tipo_captura: fila.tipo_captura,
+    estado: fila.estado,
     lo_que_dijo: fila.transcripcion ?? fila.texto,
-    caravana: fila.animal?.caravana,
-    categoria: fila.animal?.categoria,
-    estado_reproductivo: fila.animal?.estado_reproductivo,
+    caravana: animal?.caravana,
+    caravana_captura: fila.animal?.caravana,
+    categoria: animal?.categoria,
+    estado_reproductivo: animal?.estado_reproductivo,
     nombre_usuario: fila.usuario?.nombre,
     rol_usuario: fila.usuario?.rol,
     evento,
@@ -123,20 +199,71 @@ export function armarAsiento(fila) {
   }
 }
 
+const FORMA_OTRA_CARAVANA = /nombra (.+); el evento quedó en /
+
+export function caravanaParaPasar(advertencias) {
+  const advertencia = advertencias.find((cada) => cada.tipo_advertencia === 'otra_caravana')
+  const nombradas = advertencia?.detalle.match(FORMA_OTRA_CARAVANA)?.[1]
+  if (!nombradas || nombradas.includes(', ') || nombradas.includes(' y ')) {
+    return null
+  }
+  return nombradas
+}
+
+export function caravanaDestino(escrita, elegida, sugerida) {
+  if (escrita !== '' && escrita !== elegida) {
+    return escrita
+  }
+  if (sugerida && sugerida !== elegida) {
+    return sugerida
+  }
+  return null
+}
+
+export function faltaDeVaca(escrita, elegida) {
+  if (escrita === '') {
+    return 'Escribí la caravana de la vaca'
+  }
+  if (escrita !== elegida) {
+    return `Tocá "Pasar a ${escrita}" para cambiar la vaca`
+  }
+  return ''
+}
+
+export function avisoCambioDeVaca(asiento, caravanaNueva) {
+  return `Este asiento pasa de ${asiento.caravana} a ${caravanaNueva}. El registro original del ${asiento.rol_usuario} queda en ${asiento.caravana}.`
+}
+
 export function textoDeFila(asiento) {
   if (!asiento.evento) {
     return 'Sin interpretar'
   }
-  const tipo = asiento.evento.tipo_evento
-  const propuesto = tipo ? `${NOMBRES_DE_TIPO[tipo]} propuesto` : 'Sin tipo'
-  return `${propuesto} · ${describirTipo(asiento.tipo_captura)}`
+  return `${queEsElAsiento(asiento)} · ${describirTipo(asiento.tipo_captura)}`
 }
 
-export function tituloDelDetalle(asiento) {
-  if (!asiento.evento) {
-    return `${asiento.caravana} · Sin interpretar`
+function queEsElAsiento(asiento) {
+  const tipo = NOMBRES_DE_TIPO[asiento.evento.tipo_evento]
+  if (estadoDelAsiento(asiento) === 'pendiente') {
+    return tipo ? `${tipo} propuesto` : 'Sin tipo'
   }
-  return `${asiento.caravana} · ${NOMBRES_DE_TIPO[asiento.evento.tipo_evento] ?? 'Sin tipo'}`
+  return tipo ?? 'Sin tipo'
+}
+
+const ETIQUETAS_DE_FILA = { pendiente: '', confirmado: 'Confirmado', rechazado: 'Rechazado' }
+
+export function etiquetaDeFila(asiento) {
+  return ETIQUETAS_DE_FILA[estadoDelAsiento(asiento)]
+}
+
+export function textoCambioDeVaca(caravanaCaptura, caravana) {
+  return caravanaCaptura === caravana ? '' : `Se cargó en ${caravanaCaptura} y se pasó a ${caravana}`
+}
+
+export function tituloDelDetalle(asiento, caravana) {
+  if (!asiento.evento) {
+    return `${caravana} · Sin interpretar`
+  }
+  return `${caravana} · ${NOMBRES_DE_TIPO[asiento.evento.tipo_evento] ?? 'Sin tipo'}`
 }
 
 export function capturadoPor(asiento) {
@@ -237,6 +364,31 @@ function valorParaEnviar(campo, texto) {
     return null
   }
   return campo === 'edad_gestacional' ? Number(limpio) : limpio
+}
+
+function textoParaLeer(campo, valor) {
+  if (valor === '') {
+    return '-'
+  }
+  if (OPCIONES[campo]) {
+    return OPCIONES[campo].find((opcion) => opcion.valor === valor)?.texto ?? valor
+  }
+  if (campo === 'fecha_evento') {
+    return formatearFecha(valor)
+  }
+  if (campo === 'edad_gestacional') {
+    return `${valor} días`
+  }
+  return valor
+}
+
+export function camposParaLeer(evento, fechaCaptura) {
+  const formulario = formularioDesdeEvento(evento, fechaCaptura)
+  return camposVisibles(formulario).map((campo) => ({
+    campo,
+    etiqueta: ETIQUETAS_DE_CAMPO[campo],
+    valor: textoParaLeer(campo, formulario[campo]),
+  }))
 }
 
 export function datosParaEnviar(formulario) {

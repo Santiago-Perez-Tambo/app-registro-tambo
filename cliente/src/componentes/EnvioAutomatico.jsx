@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { enviarCola, escucharEnvio } from '../cola.js'
+import { puedeCapturar } from '../permisos.js'
 import { useSesion } from '../sesion.jsx'
 import { useSenal } from './IndicadorSenal.jsx'
 
@@ -36,7 +37,7 @@ function EnvioAutomatico() {
     })
   }, [salirPorSesionVencida])
 
-  if (usuario?.rol !== 'tambero') {
+  if (!puedeCapturar(usuario?.rol)) {
     return null
   }
   return <DisparadoresDeEnvio idUsuario={usuario.id_usuario} />

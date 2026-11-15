@@ -13,6 +13,7 @@ import {
   puedeConsultar,
   estaPorConfirmar,
   validarConfirmacion,
+  leerCambioDeAnimal,
   marcarComoDato,
   leerRespuestaDelModelo,
   edadEnDias,
@@ -577,4 +578,20 @@ test('un campo que no corresponde al tipo se descarta', () => {
   assert.deepEqual(validarConfirmacion(tactoVacia, HOY), {
     evento: eventoEsperado({ fecha_evento: HOY, tipo_evento: 'tacto', resultado_tacto: 'vacía' }),
   })
+})
+
+test('si no viene otra vaca, el asiento queda en la misma', () => {
+  assert.deepEqual(leerCambioDeAnimal(undefined, 7), { idAnimal: null })
+  assert.deepEqual(leerCambioDeAnimal(null, 7), { idAnimal: null })
+  assert.deepEqual(leerCambioDeAnimal(7, 7), { idAnimal: null })
+})
+
+test('si viene otra vaca con un identificador válido, se toma', () => {
+  assert.deepEqual(leerCambioDeAnimal(12, 7), { idAnimal: 12 })
+})
+
+test('un identificador de vaca que no es un entero positivo se rechaza', () => {
+  for (const valor of ['12', 0, -3, 1.5, 'A127', {}, []]) {
+    assert.deepEqual(leerCambioDeAnimal(valor, 7), { error: 'Esa caravana no está en el rodeo' })
+  }
 })

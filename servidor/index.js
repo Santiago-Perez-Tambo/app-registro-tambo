@@ -15,6 +15,8 @@ import {
   puedeConsultar,
   estaPorConfirmar,
   validarConfirmacion,
+  leerCambioDeAnimal,
+  AVISO_CARAVANA_FUERA_DEL_RODEO,
   ESTADOS_POR_CONFIRMAR,
 } from './captura.js'
 
@@ -160,7 +162,7 @@ async function volverAInterpretar(pedido, respuesta) {
 async function buscarEvento(idEvento) {
   const { data, error } = await supabase
     .from('evento')
-    .select('id_evento, id_captura, id_usuario_confirma, animal(id_establecimiento), captura(id_usuario, estado)')
+    .select('id_evento, id_captura, id_animal, id_usuario_confirma, animal(id_establecimiento), captura(id_usuario, estado)')
     .eq('id_evento', idEvento)
     .maybeSingle()
   if (error) {
@@ -228,14 +230,28 @@ async function resolverAdvertencias(idEvento) {
   }
 }
 
+async function animalDelAsiento(cambio, eventoGuardado, idEstablecimiento) {
+  if (cambio.idAnimal === null) {
+    return eventoGuardado.id_animal
+  }
+  const estaEnElRodeo = await animalEsDelEstablecimiento(cambio.idAnimal, idEstablecimiento)
+  return estaEnElRodeo ? cambio.idAnimal : null
+}
+
 async function confirmarAsiento(pedido, respuesta) {
   const { error, evento } = validarConfirmacion(pedido.body, ahoraArgentina().slice(0, 10))
-  if (error) {
-    return respuesta.status(400).json({ error })
+  const cambio = leerCambioDeAnimal(pedido.body?.id_animal, pedido.evento.id_animal)
+  if (error || cambio.error) {
+    return respuesta.status(400).json({ error: error ?? cambio.error })
   }
   try {
     const { id_evento, id_captura } = pedido.evento
-    if (!(await guardarConfirmacion(id_evento, evento, pedido.usuario.id_usuario))) {
+    const idAnimal = await animalDelAsiento(cambio, pedido.evento, pedido.usuario.id_establecimiento)
+    if (idAnimal === null) {
+      return respuesta.status(400).json({ error: AVISO_CARAVANA_FUERA_DEL_RODEO })
+    }
+    const eventoConfirmado = { ...evento, id_animal: idAnimal }
+    if (!(await guardarConfirmacion(id_evento, eventoConfirmado, pedido.usuario.id_usuario))) {
       return respuesta.status(409).json({ error: AVISO_YA_REVISADO })
     }
     await cambiarEstadoDeCaptura(id_captura, 'confirmada')

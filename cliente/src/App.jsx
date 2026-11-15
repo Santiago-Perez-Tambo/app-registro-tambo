@@ -26,7 +26,7 @@ function RutaProtegida() {
   if (!puedeEntrar(usuario.rol, pathname)) {
     return (
       <Navigate
-        to={pantallaInicial(usuario.rol)}
+        to={pantallaInicial(usuario.rol, window.innerWidth)}
         replace
         state={{ aviso: 'Esta pantalla no está disponible para tu usuario' }}
       />
@@ -58,6 +58,14 @@ function DisenoEscritorio() {
   )
 }
 
+function DisenoCelular() {
+  const { usuario } = useSesion()
+  if (puedeEntrar(usuario.rol, '/escritorio')) {
+    return <DisenoEscritorio />
+  }
+  return <Outlet />
+}
+
 function App() {
   return (
     <SesionProveedor>
@@ -67,11 +75,13 @@ function App() {
           <Route path="/" element={<Navigate to="/ingreso" replace />} />
           <Route path="/ingreso" element={<Ingreso />} />
           <Route element={<RutaProtegida />}>
-            <Route path="/celular" element={<Inicio />} />
-            <Route path="/celular/vaca/:caravana" element={<FichaVaca />} />
-            <Route path="/celular/vaca/:caravana/escribir" element={<Capturar modo="texto" />} />
-            <Route path="/celular/vaca/:caravana/foto" element={<Capturar modo="foto" />} />
-            <Route path="/celular/guardados" element={<Guardados />} />
+            <Route path="/celular" element={<DisenoCelular />}>
+              <Route index element={<Inicio />} />
+              <Route path="vaca/:caravana" element={<FichaVaca />} />
+              <Route path="vaca/:caravana/escribir" element={<Capturar modo="texto" />} />
+              <Route path="vaca/:caravana/foto" element={<Capturar modo="foto" />} />
+              <Route path="guardados" element={<Guardados />} />
+            </Route>
             <Route path="/escritorio" element={<DisenoEscritorio />}>
               <Route index element={<Navigate to="por-confirmar" replace />} />
               <Route path="por-confirmar" element={<PorConfirmar />} />

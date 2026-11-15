@@ -137,6 +137,18 @@ export function puedeConsultar(usuario) {
   return ROLES_QUE_CONSULTAN.includes(usuario.rol)
 }
 
+export const AVISO_CARAVANA_FUERA_DEL_RODEO = 'Esa caravana no está en el rodeo'
+
+export function leerCambioDeAnimal(idPedido, idActual) {
+  if (idPedido === undefined || idPedido === null || idPedido === idActual) {
+    return { idAnimal: null }
+  }
+  if (!Number.isInteger(idPedido) || idPedido < 1) {
+    return { error: AVISO_CARAVANA_FUERA_DEL_RODEO }
+  }
+  return { idAnimal: idPedido }
+}
+
 export function estaPorConfirmar(evento) {
   return evento.id_usuario_confirma === null && ESTADOS_POR_CONFIRMAR.includes(evento.captura?.estado)
 }

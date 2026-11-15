@@ -1,6 +1,6 @@
 import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState } from 'react'
-import { pantallaInicial } from './permisos.js'
+import { rolHabilitado } from './permisos.js'
 import { buscarFilaUsuario, cerrarSesionLocal, entrarConCorreo, escucharCambiosDeSesion, salirDeSupabase } from './supabase.js'
 
 const ContextoSesion = createContext(null)
@@ -10,7 +10,7 @@ const AVISO_SESION_VENCIDA = 'La sesión venció. Entrá de nuevo; los registros
 function leerUsuarioGuardado() {
   try {
     const usuario = JSON.parse(localStorage.getItem(CLAVE_USUARIO))
-    return pantallaInicial(usuario?.rol) ? usuario : null
+    return rolHabilitado(usuario?.rol) ? usuario : null
   } catch (error) {
     console.error(error)
     return null
@@ -55,7 +55,7 @@ export function SesionProveedor({ children }) {
     cambiarBuscandoUsuario(true)
     try {
       const fila = await buscarFilaUsuario(idDeAuth)
-      if (fila && pantallaInicial(fila.rol)) {
+      if (fila && rolHabilitado(fila.rol)) {
         guardarUsuario(fila)
         cambiarUsuario(fila)
       } else {

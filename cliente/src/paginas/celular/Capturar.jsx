@@ -219,7 +219,7 @@ function Capturar({ modo }) {
   }
 
   return (
-    <main className="pantalla ficha">
+    <main className="pantalla pantalla-celular ficha">
       <Encabezado titulo={caravanaBuscada} volver={enlaceFicha(caravanaBuscada)} />
       {cargando && <p className="cargando">Cargando</p>}
       {animal && <p className="etiquetas"><span className="etiqueta">{mostrarPalabra(animal.categoria)}</span></p>}

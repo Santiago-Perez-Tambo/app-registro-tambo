@@ -19,7 +19,7 @@ function Ingreso() {
   }
 
   if (usuario) {
-    return <Navigate to={pantallaInicial(usuario.rol)} replace />
+    return <Navigate to={pantallaInicial(usuario.rol, window.innerWidth)} replace />
   }
 
   return (

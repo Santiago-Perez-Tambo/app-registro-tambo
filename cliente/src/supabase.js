@@ -4,11 +4,12 @@ import { armarAsiento, quedanPorConfirmar } from './asiento.js'
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_KEY)
 const ESTADOS_POR_CONFIRMAR = ['sincronizada', 'interpretada']
-const COLUMNAS_POR_CONFIRMAR = [
-  'id_captura, id_usuario, fecha_hora, tipo_captura, texto, transcripcion',
+const ESTADOS_REVISADOS = ['confirmada', 'rechazada']
+const COLUMNAS_DEL_ASIENTO = [
+  'id_captura, id_usuario, fecha_hora, tipo_captura, texto, transcripcion, estado',
   'animal(caravana, categoria, estado_reproductivo)',
   'usuario(nombre, rol)',
-  'evento(id_evento, id_usuario_confirma, tipo_evento, fecha_evento, tipo_servicio, toro, resultado_tacto, edad_gestacional, motivo_secado, sexo_ternero, advertencia(id_advertencia, tipo_advertencia, detalle, resuelta))',
+  'evento(id_evento, id_usuario_confirma, fecha_confirmacion, tipo_evento, fecha_evento, tipo_servicio, toro, resultado_tacto, edad_gestacional, motivo_secado, sexo_ternero, animal(caravana, categoria, estado_reproductivo), usuario(nombre), advertencia(id_advertencia, tipo_advertencia, detalle, resuelta))',
 ].join(', ')
 
 export function escucharCambiosDeSesion(alCambiar) {
@@ -108,13 +109,27 @@ export async function leerPorConfirmar() {
   await exigirSesionVigente()
   const { data, error } = await supabase
     .from('captura')
-    .select(COLUMNAS_POR_CONFIRMAR)
+    .select(COLUMNAS_DEL_ASIENTO)
     .in('estado', ESTADOS_POR_CONFIRMAR)
     .order('fecha_hora')
   if (error) {
     throw error
   }
   return quedanPorConfirmar(data).map(armarAsiento)
+}
+
+export async function leerRevisados(desde) {
+  await exigirSesionVigente()
+  const { data, error } = await supabase
+    .from('captura')
+    .select(COLUMNAS_DEL_ASIENTO)
+    .in('estado', ESTADOS_REVISADOS)
+    .gte('fecha_hora', desde)
+    .order('fecha_hora')
+  if (error) {
+    throw error
+  }
+  return data.map(armarAsiento)
 }
 
 export async function contarPorConfirmar() {
@@ -135,25 +150,31 @@ function errorDeCampo(campo, mensaje) {
   return error
 }
 
-async function buscarIdMadre(textoMadre, idEstablecimiento) {
-  const madre = normalizarCaravana(textoMadre)
-  if (!madre) {
-    return null
-  }
+export async function buscarIdAnimal(caravana, idEstablecimiento) {
+  await exigirSesionVigente()
   const { data, error } = await supabase
     .from('animal')
     .select('id_animal')
     .eq('id_establecimiento', idEstablecimiento)
-    .eq('caravana', madre)
+    .eq('caravana', normalizarCaravana(caravana))
     .is('fecha_baja', null)
     .maybeSingle()
   if (error) {
     throw error
   }
-  if (!data) {
+  return data?.id_animal ?? null
+}
+
+async function buscarIdMadre(textoMadre, idEstablecimiento) {
+  const madre = normalizarCaravana(textoMadre)
+  if (!madre) {
+    return null
+  }
+  const idMadre = await buscarIdAnimal(madre, idEstablecimiento)
+  if (!idMadre) {
     throw errorDeCampo('madre', `La madre ${madre} no está en el rodeo`)
   }
-  return data.id_animal
+  return idMadre
 }
 
 export async function altaAnimal(datos, idEstablecimiento) {
