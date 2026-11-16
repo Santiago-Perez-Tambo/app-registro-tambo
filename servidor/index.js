@@ -19,10 +19,13 @@ import {
   AVISO_CARAVANA_FUERA_DEL_RODEO,
   ESTADOS_POR_CONFIRMAR,
 } from './captura.js'
+import { calcularParaAnimal } from './reglas.js'
 
 const TAMANO_MAXIMO_PEDIDO = '8mb'
 const VENCIMIENTO_ENLACE_FOTO = 5 * 60
 const AVISO_YA_REVISADO = 'Este asiento ya fue confirmado o rechazado'
+const DIAS_DEL_ESTABLECIMIENTO =
+  'dias_servicio_tacto, dias_parto_secado, dias_calostro, dias_lactancia_primer_celo, dias_lactancia_induccion'
 const origenPermitido = process.env.ORIGEN_PERMITIDO
 const puerto = process.env.PORT || 3000
 
@@ -238,15 +241,101 @@ async function animalDelAsiento(cambio, eventoGuardado, idEstablecimiento) {
   return estaEnElRodeo ? cambio.idAnimal : null
 }
 
+async function leerAnimalConDias(idAnimal) {
+  const { data, error } = await supabase
+    .from('animal')
+    .select(`id_animal, categoria, estado_reproductivo, establecimiento(${DIAS_DEL_ESTABLECIMIENTO})`)
+    .eq('id_animal', idAnimal)
+    .single()
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+async function leerEventosConfirmados(idAnimal) {
+  const { data, error } = await supabase
+    .from('evento')
+    .select('id_evento, tipo_evento, fecha_evento, resultado_tacto, edad_gestacional, motivo_secado')
+    .eq('id_animal', idAnimal)
+    .not('id_usuario_confirma', 'is', null)
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+async function cerrarAlertas(idAnimal, tipos) {
+  if (tipos.length === 0) {
+    return
+  }
+  const { error } = await supabase
+    .from('alerta')
+    .update({ estado: 'cumplida' })
+    .eq('id_animal', idAnimal)
+    .eq('estado', 'vigente')
+    .in('tipo_alerta', tipos)
+  if (error) {
+    throw error
+  }
+}
+
+async function insertarFilas(tabla, filas) {
+  if (filas.length === 0) {
+    return
+  }
+  const { error } = await supabase.from(tabla).insert(filas)
+  if (error) {
+    throw error
+  }
+}
+
+async function actualizarAnimal(idAnimal, cambios) {
+  if (Object.keys(cambios).length === 0) {
+    return
+  }
+  const { error } = await supabase.from('animal').update(cambios).eq('id_animal', idAnimal)
+  if (error) {
+    throw error
+  }
+}
+
+async function guardarResultadoDeReglas(idAnimal, resultado) {
+  await cerrarAlertas(idAnimal, resultado.tiposQueSeCierran)
+  await insertarFilas('alerta', resultado.alertasNuevas)
+  await insertarFilas('advertencia', resultado.advertencias)
+  await actualizarAnimal(idAnimal, resultado.cambiosDelAnimal)
+}
+
+async function aplicarReglas(idEvento, idAnimal) {
+  const animal = await leerAnimalConDias(idAnimal)
+  const eventos = await leerEventosConfirmados(idAnimal)
+  const evento = eventos.find((uno) => uno.id_evento === idEvento)
+  const anteriores = eventos.filter((uno) => uno.id_evento !== idEvento)
+  const resultado = calcularParaAnimal(animal, evento, anteriores, animal.establecimiento)
+  await guardarResultadoDeReglas(idAnimal, resultado)
+}
+
+async function actualizarVacaYResponder(idEvento, idAnimal, respuesta) {
+  try {
+    await aplicarReglas(idEvento, idAnimal)
+    respuesta.json({ confirmado: true })
+  } catch (error) {
+    console.error(error)
+    respuesta.status(500).json({ error: 'Se confirmó el asiento, pero no se pudo actualizar la vaca' })
+  }
+}
+
 async function confirmarAsiento(pedido, respuesta) {
   const { error, evento } = validarConfirmacion(pedido.body, ahoraArgentina().slice(0, 10))
   const cambio = leerCambioDeAnimal(pedido.body?.id_animal, pedido.evento.id_animal)
   if (error || cambio.error) {
     return respuesta.status(400).json({ error: error ?? cambio.error })
   }
+  const { id_evento, id_captura } = pedido.evento
+  let idAnimal
   try {
-    const { id_evento, id_captura } = pedido.evento
-    const idAnimal = await animalDelAsiento(cambio, pedido.evento, pedido.usuario.id_establecimiento)
+    idAnimal = await animalDelAsiento(cambio, pedido.evento, pedido.usuario.id_establecimiento)
     if (idAnimal === null) {
       return respuesta.status(400).json({ error: AVISO_CARAVANA_FUERA_DEL_RODEO })
     }
@@ -256,11 +345,11 @@ async function confirmarAsiento(pedido, respuesta) {
     }
     await cambiarEstadoDeCaptura(id_captura, 'confirmada')
     await resolverAdvertencias(id_evento)
-    respuesta.json({ confirmado: true })
   } catch (errorAlGuardar) {
     console.error(errorAlGuardar)
-    respuesta.status(500).json({ error: 'No se pudo confirmar el asiento. Probá de nuevo.' })
+    return respuesta.status(500).json({ error: 'No se pudo confirmar el asiento. Probá de nuevo.' })
   }
+  await actualizarVacaYResponder(id_evento, idAnimal, respuesta)
 }
 
 async function rechazarAsiento(pedido, respuesta) {
