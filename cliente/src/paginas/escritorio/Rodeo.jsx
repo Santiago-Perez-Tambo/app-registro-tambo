@@ -5,6 +5,7 @@ import Encabezado from '../../componentes/Encabezado.jsx'
 import { buscarPorCaravana, mostrarPalabra } from '../../animal.js'
 import { textoFechaCopia } from '../../captura.js'
 import { actualizarRodeo } from '../../cola.js'
+import { hoyArgentina, proximoAviso, textoDiasDeLactancia, textoUltimoEvento } from '../../historia.js'
 import { puedeEntrar } from '../../permisos.js'
 import { useSesion } from '../../sesion.jsx'
 
@@ -30,10 +31,37 @@ function avisoDeCopia(copia) {
   return 'No se pudo traer el rodeo. Revisá la conexión y probá de nuevo.'
 }
 
+function CeldaConRotulo({ rotulo, valor }) {
+  return (
+    <td>
+      <span className="rotulo-angosto">{rotulo}: </span>
+      {valor}
+    </td>
+  )
+}
+
+function FilaRodeo({ animal, hoy }) {
+  return (
+    <tr>
+      <td>
+        <Link to={`/escritorio/vaca/${encodeURIComponent(animal.caravana)}`} className="enlace-caravana">
+          {animal.caravana}
+        </Link>
+      </td>
+      <td>{mostrarPalabra(animal.categoria)}</td>
+      <td>{mostrarPalabra(animal.estado_reproductivo)}</td>
+      <CeldaConRotulo rotulo="Último evento" valor={textoUltimoEvento(animal.ultimos_eventos ?? [])} />
+      <CeldaConRotulo rotulo="Días lact." valor={textoDiasDeLactancia(animal.inicio_lactancia, hoy)} />
+      <CeldaConRotulo rotulo="Próximo" valor={proximoAviso(animal.alertas ?? [])} />
+    </tr>
+  )
+}
+
 function TablaRodeo({ animales }) {
   if (animales.length === 0) {
     return <p className="mensaje-aviso">Ningún animal coincide con la búsqueda.</p>
   }
+  const hoy = hoyArgentina()
   return (
     <table>
       <thead>
@@ -41,19 +69,14 @@ function TablaRodeo({ animales }) {
           <th>Caravana</th>
           <th>Categoría</th>
           <th>Estado</th>
+          <th>Último evento</th>
+          <th>Días lact.</th>
+          <th>Próximo</th>
         </tr>
       </thead>
       <tbody>
         {animales.map((animal) => (
-          <tr key={animal.caravana}>
-            <td>
-              <Link to={`/escritorio/vaca/${encodeURIComponent(animal.caravana)}`} className="enlace-caravana">
-                {animal.caravana}
-              </Link>
-            </td>
-            <td>{mostrarPalabra(animal.categoria)}</td>
-            <td>{mostrarPalabra(animal.estado_reproductivo)}</td>
-          </tr>
+          <FilaRodeo key={animal.caravana} animal={animal} hoy={hoy} />
         ))}
       </tbody>
     </table>

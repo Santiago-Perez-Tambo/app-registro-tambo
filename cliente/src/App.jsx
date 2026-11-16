@@ -12,9 +12,10 @@ import Avisos from './paginas/escritorio/Avisos.jsx'
 import Historia from './paginas/escritorio/Historia.jsx'
 import PorConfirmar from './paginas/escritorio/PorConfirmar.jsx'
 import Rodeo from './paginas/escritorio/Rodeo.jsx'
+import { hoyArgentina } from './historia.js'
 import { pantallaInicial, puedeEntrar } from './permisos.js'
 import { SesionProveedor, useSesion } from './sesion.jsx'
-import { contarPorConfirmar } from './supabase.js'
+import { contarPorConfirmar, leerAvisosDelRodeo } from './supabase.js'
 
 function RutaProtegida() {
   const { usuario } = useSesion()
@@ -36,11 +37,17 @@ function RutaProtegida() {
 }
 
 function DisenoEscritorio() {
+  const { pathname } = useLocation()
   const [cantidadPorConfirmar, cambiarCantidadPorConfirmar] = useState(0)
+  const [cantidadAvisos, cambiarCantidadAvisos] = useState(0)
 
   useEffect(() => {
     contarAlEntrar()
   }, [])
+
+  useEffect(() => {
+    contarAvisos()
+  }, [pathname])
 
   async function contarAlEntrar() {
     try {
@@ -50,9 +57,17 @@ function DisenoEscritorio() {
     }
   }
 
+  async function contarAvisos() {
+    try {
+      cambiarCantidadAvisos((await leerAvisosDelRodeo(hoyArgentina())).length)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   return (
     <div className="diseno-escritorio">
-      <MenuLateral cantidadPorConfirmar={cantidadPorConfirmar} />
+      <MenuLateral cantidadPorConfirmar={cantidadPorConfirmar} cantidadAvisos={cantidadAvisos} />
       <Outlet context={{ cambiarCantidadPorConfirmar }} />
     </div>
   )
@@ -81,11 +96,12 @@ function App() {
               <Route path="vaca/:caravana/escribir" element={<Capturar modo="texto" />} />
               <Route path="vaca/:caravana/foto" element={<Capturar modo="foto" />} />
               <Route path="guardados" element={<Guardados />} />
+              <Route path="avisos" element={<Avisos zona="celular" />} />
             </Route>
             <Route path="/escritorio" element={<DisenoEscritorio />}>
               <Route index element={<Navigate to="por-confirmar" replace />} />
               <Route path="por-confirmar" element={<PorConfirmar />} />
-              <Route path="avisos" element={<Avisos />} />
+              <Route path="avisos" element={<Avisos zona="escritorio" />} />
               <Route path="rodeo" element={<Rodeo />} />
               <Route path="rodeo/nuevo" element={<AltaAnimal />} />
               <Route path="vaca/:caravana" element={<Historia />} />

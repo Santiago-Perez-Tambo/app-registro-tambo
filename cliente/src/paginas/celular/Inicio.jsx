@@ -188,6 +188,11 @@ function Inicio() {
         <Link to="/celular/guardados" className="boton boton-enlace">Registros guardados</Link>
       </p>
       {conMenu && <EnlacePorConfirmar />}
+      <p>
+        <Link to={conMenu ? '/escritorio/avisos' : '/celular/avisos'} className="boton boton-secundario">
+          Ver avisos del rodeo
+        </Link>
+      </p>
       {lineaCopia && <p className="nota-chica">{lineaCopia}</p>}
       {aviso && <p className="mensaje-aviso">{aviso}</p>}
       {!conMenu && <PieSalir />}

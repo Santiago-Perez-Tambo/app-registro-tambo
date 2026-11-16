@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { pantallaInicial, puedeCapturar, puedeEntrar, puedeRevisar, rolHabilitado } from './permisos.js'
+import {
+  pantallaInicial,
+  puedeCapturar,
+  puedeEntrar,
+  puedeRegistrarDesdeEscritorio,
+  puedeRevisar,
+  rolHabilitado,
+} from './permisos.js'
 
 test('el propietario revisa cualquier asiento y el asesor solo los que cargó él', () => {
   assert.equal(puedeRevisar({ id_usuario: 1, rol: 'propietario' }, { id_usuario: 2 }), true)
@@ -91,6 +98,13 @@ test('con 1280 px de ancho el tambero empieza en el celular y los demás en por 
 test('el corte entre celular y pc está en 800 px', () => {
   assert.equal(pantallaInicial('propietario', 799), '/celular')
   assert.equal(pantallaInicial('propietario', 800), '/escritorio/por-confirmar')
+})
+
+test('desde la historia registran el propietario y el asesor, y el tambero no', () => {
+  assert.equal(puedeRegistrarDesdeEscritorio('propietario'), true)
+  assert.equal(puedeRegistrarDesdeEscritorio('asesor'), true)
+  assert.equal(puedeRegistrarDesdeEscritorio('tambero'), false)
+  assert.equal(puedeRegistrarDesdeEscritorio(undefined), false)
 })
 
 test('solo los tres roles capturan', () => {

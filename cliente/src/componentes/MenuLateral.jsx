@@ -6,7 +6,7 @@ function claseEnlace({ isActive }) {
   return isActive ? 'enlace-menu enlace-activo' : 'enlace-menu'
 }
 
-function MenuLateral({ cantidadPorConfirmar }) {
+function MenuLateral({ cantidadPorConfirmar, cantidadAvisos }) {
   const { usuario } = useSesion()
 
   return (
@@ -17,7 +17,10 @@ function MenuLateral({ cantidadPorConfirmar }) {
         Por confirmar
         {cantidadPorConfirmar > 0 && <span className="cantidad-menu">{cantidadPorConfirmar}</span>}
       </NavLink>
-      <NavLink to="/escritorio/avisos" className={claseEnlace}>Avisos</NavLink>
+      <NavLink to="/escritorio/avisos" className={claseEnlace}>
+        Avisos
+        {cantidadAvisos > 0 && <span className="cantidad-menu">{cantidadAvisos}</span>}
+      </NavLink>
       <NavLink to="/escritorio/rodeo" className={claseEnlace}>Rodeo</NavLink>
       <div className="pie-usuario">
         <p className="nombre-usuario">{usuario.nombre}, {usuario.rol}</p>

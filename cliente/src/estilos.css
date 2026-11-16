@@ -962,9 +962,117 @@ a.boton {
   font-weight: 700;
 }
 
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.tarjeta {
+  padding: 12px 16px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.tarjeta dt {
+  font-size: 0.9375rem;
+}
+
+.tarjeta dd {
+  margin: 4px 0 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.tarjeta-vaca {
+  margin-top: 16px;
+}
+
+.botones-arriba {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.historia .mensaje-aviso,
+.historia .mensaje-correcto {
+  margin-top: 12px;
+}
+
+.fila-propuesta td {
+  background: var(--color-aviso);
+  color: var(--color-aviso-texto);
+  border-width: 2px;
+  border-color: var(--color-destacado);
+}
+
+.advertencias-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etiqueta-advertencia {
+  padding: 2px 10px;
+  border: 1px solid var(--color-aviso-texto);
+  border-radius: 999px;
+  background: var(--color-aviso);
+  color: var(--color-aviso-texto);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.caravana-tabla {
+  font-size: 1.625rem;
+  font-weight: 700;
+}
+
+.boton.boton-ver {
+  min-height: 44px;
+}
+
+.lista-eventos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.fila-evento {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  padding: 12px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.cuando-evento {
+  grid-row: span 2;
+  font-size: 1rem;
+}
+
+.rotulo-angosto {
+  display: none;
+}
+
 @media (max-width: 799px) {
   .pantalla {
     padding: 12px 16px;
+  }
+
+  .rotulo-angosto {
+    display: inline;
+    font-weight: 700;
   }
 
   .diseno-escritorio {
@@ -1039,6 +1147,12 @@ a.boton {
 
   td:first-child {
     flex-basis: 100%;
+  }
+
+  tr.fila-propuesta {
+    border: 2px solid var(--color-destacado);
+    background: var(--color-aviso);
+    color: var(--color-aviso-texto);
   }
 
   .enlace-caravana {

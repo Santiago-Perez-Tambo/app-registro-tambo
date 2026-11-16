@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { Link, useLocation, useOutletContext } from 'react-router-dom'
 import Boton from '../../componentes/Boton.jsx'
 import Encabezado from '../../componentes/Encabezado.jsx'
 import {
@@ -79,6 +79,11 @@ function leerVista(idUsuario) {
     console.error(error)
     return VISTA_INICIAL
   }
+}
+
+function vistaAlEntrar(idUsuario, idCapturaPedida) {
+  const guardada = leerVista(idUsuario)
+  return idCapturaPedida ? { ...guardada, filtro: 'todos' } : guardada
 }
 
 function guardarVista(idUsuario, vista) {
@@ -514,6 +519,14 @@ function DatosDeLaCaptura({ asiento }) {
   )
 }
 
+function VerHistoria({ caravana }) {
+  return (
+    <Link to={`/escritorio/vaca/${encodeURIComponent(caravana)}`} className="boton boton-secundario">
+      Ver historia
+    </Link>
+  )
+}
+
 function CambioDeVaca({ asiento, caravana }) {
   const texto = textoCambioDeVaca(asiento.caravana_captura, caravana)
   return texto ? <p className="cambio-de-vaca">{texto}</p> : null
@@ -554,6 +567,7 @@ function DetalleAsiento({ asiento, enviando, hacer }) {
       <div className="titulo-detalle">
         <h2>{tituloDelDetalle(asiento, caravana)}</h2>
         {asiento.evento && <span className="etiqueta etiqueta-propuesto">Propuesto por el sistema</span>}
+        <VerHistoria caravana={asiento.caravana} />
       </div>
       <DatosDeLaCaptura asiento={asiento} />
       <CambioDeVaca asiento={asiento} caravana={caravana} />
@@ -596,6 +610,7 @@ function DetalleRevisado({ asiento }) {
       <div className="titulo-detalle">
         <h2>{tituloDelDetalle(asiento, asiento.caravana)}</h2>
         <span className={`etiqueta etiqueta-${estadoDelAsiento(asiento)}`}>{etiquetaDeRevision(asiento)}</span>
+        <VerHistoria caravana={asiento.caravana} />
       </div>
       <DatosDeLaCaptura asiento={asiento} />
       <CambioDeVaca asiento={asiento} caravana={asiento.caravana} />
@@ -676,8 +691,10 @@ function SinVisibles({ asientos }) {
 
 function VistaDeAsientos({ asientos, enviando, hacer, resultado, vecesHecho, alElegirOtro }) {
   const { usuario } = useSesion()
-  const [vista, cambiarVista] = useState(() => leerVista(usuario.id_usuario))
-  const [seleccion, cambiarSeleccion] = useState(SIN_SELECCION)
+  const { state } = useLocation()
+  const idCapturaPedida = state?.idCaptura ?? null
+  const [vista, cambiarVista] = useState(() => vistaAlEntrar(usuario.id_usuario, idCapturaPedida))
+  const [seleccion, cambiarSeleccion] = useState({ ...SIN_SELECCION, id: idCapturaPedida })
   const refColumna = useRef(null)
   const visibles = verAsientos(asientos, vista)
   const elegido = visibles.find((asiento) => asiento.id_captura === elegirAsiento(visibles, seleccion.id, seleccion.indice))

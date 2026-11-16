@@ -1,7 +1,15 @@
 import Dexie from 'dexie'
 import { ahoraArgentina, ordenarPorFechaHora, queHacerConLaRespuesta, siguienteParaEnviar } from './captura.js'
+import { armarCopiaDelRodeo } from './historia.js'
 import { enviarCaptura } from './servidor.js'
-import { leerRodeo, leerTokenVigente, renovarToken } from './supabase.js'
+import {
+  leerAlertasVigentes,
+  leerEventosDelRodeo,
+  leerParametros,
+  leerRodeo,
+  leerTokenVigente,
+  renovarToken,
+} from './supabase.js'
 
 const base = new Dexie('registro_tambo')
 base.version(1).stores({ rodeo: 'caravana' })
@@ -39,7 +47,13 @@ export async function buscarVacaEnCopia(caravana) {
 
 async function pisarCopiaRodeo() {
   try {
-    const animales = await leerRodeo()
+    const [rodeo, eventos, alertas, parametros] = await Promise.all([
+      leerRodeo(),
+      leerEventosDelRodeo(),
+      leerAlertasVigentes(),
+      leerParametros(),
+    ])
+    const animales = armarCopiaDelRodeo(rodeo, eventos, alertas, parametros)
     await base.transaction('rw', base.rodeo, async () => {
       await base.rodeo.clear()
       await base.rodeo.bulkPut(animales)

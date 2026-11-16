@@ -1,8 +1,11 @@
 import { createClient, isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { esCaravanaRepetida, mensajeCaravanaRepetida, normalizarCaravana } from './animal.js'
 import { armarAsiento, quedanPorConfirmar } from './asiento.js'
+import { avisosParaMostrar, textoPorQue } from './historia.js'
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_KEY)
+const COLUMNAS_DEL_EVENTO =
+  'id_evento, id_animal, id_captura, id_usuario_confirma, tipo_evento, fecha_evento, tipo_servicio, toro, resultado_tacto, edad_gestacional, motivo_secado, sexo_ternero'
 const ESTADOS_POR_CONFIRMAR = ['sincronizada', 'interpretada']
 const ESTADOS_REVISADOS = ['confirmada', 'rechazada']
 const COLUMNAS_DEL_ASIENTO = [
@@ -103,6 +106,103 @@ export async function leerRodeo() {
     throw error
   }
   return data
+}
+
+export async function leerParametros() {
+  await exigirSesionVigente()
+  const { data, error } = await supabase.from('establecimiento').select('dias_calostro, dias_aviso_alerta').single()
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+function alertaPlana(fila) {
+  const { animal, evento, ...alerta } = fila
+  return { ...alerta, caravana: animal?.caravana, fecha_origen: evento?.fecha_evento ?? null }
+}
+
+export async function leerAlertasVigentes() {
+  await exigirSesionVigente()
+  const { data, error } = await supabase
+    .from('alerta')
+    .select('id_alerta, id_animal, id_evento_origen, tipo_alerta, fecha_objetivo, estado, animal(caravana), evento(fecha_evento)')
+    .eq('estado', 'vigente')
+    .order('fecha_objetivo')
+  if (error) {
+    throw error
+  }
+  return data.map(alertaPlana)
+}
+
+export async function leerAvisosDelRodeo(hoy) {
+  const [alertas, parametros] = await Promise.all([leerAlertasVigentes(), leerParametros()])
+  return avisosParaMostrar(alertas, parametros, hoy).map((aviso) => ({
+    ...aviso,
+    por_que: textoPorQue(aviso, alertas, hoy),
+  }))
+}
+
+function eventoPlano(fila) {
+  const { captura, usuario, advertencia, ...evento } = fila
+  return {
+    ...evento,
+    fecha_hora_captura: captura?.fecha_hora ?? null,
+    estado_captura: captura?.estado ?? null,
+    rol_confirma: usuario?.rol ?? null,
+    advertencias: advertencia ?? [],
+  }
+}
+
+export async function leerEventosDelRodeo() {
+  await exigirSesionVigente()
+  const { data, error } = await supabase
+    .from('evento')
+    .select(`${COLUMNAS_DEL_EVENTO}, captura(fecha_hora)`)
+    .not('id_usuario_confirma', 'is', null)
+  if (error) {
+    throw error
+  }
+  return data.map(eventoPlano)
+}
+
+async function buscarVacaPorCaravana(caravana) {
+  const { data, error } = await supabase
+    .from('animal')
+    .select('id_animal, caravana, categoria, estado_reproductivo')
+    .eq('caravana', normalizarCaravana(caravana))
+    .is('fecha_baja', null)
+    .maybeSingle()
+  if (error) {
+    throw error
+  }
+  return data
+}
+
+async function leerEventosDeLaVaca(idAnimal) {
+  const { data, error } = await supabase
+    .from('evento')
+    .select(`${COLUMNAS_DEL_EVENTO}, captura(fecha_hora, estado), usuario(rol), advertencia(id_advertencia, tipo_advertencia, resuelta)`)
+    .eq('id_animal', idAnimal)
+  if (error) {
+    throw error
+  }
+  return data.map(eventoPlano)
+}
+
+export async function leerHistoria(caravana) {
+  await exigirSesionVigente()
+  const animal = await buscarVacaPorCaravana(caravana)
+  if (!animal) {
+    return null
+  }
+  const [eventos, alertas, parametros] = await Promise.all([
+    leerEventosDeLaVaca(animal.id_animal),
+    leerAlertasVigentes(),
+    leerParametros(),
+  ])
+  const alertasDeLaVaca = alertas.filter((alerta) => alerta.id_animal === animal.id_animal)
+  return { animal, eventos, alertas: alertasDeLaVaca, parametros }
 }
 
 export async function leerPorConfirmar() {

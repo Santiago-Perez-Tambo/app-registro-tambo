@@ -16,6 +16,10 @@ function puedeConsultar(rol) {
   return ROLES_QUE_CONSULTAN.includes(rol)
 }
 
+export function puedeRegistrarDesdeEscritorio(rol) {
+  return puedeCapturar(rol) && puedeConsultar(rol)
+}
+
 export function rolHabilitado(rol) {
   return puedeCapturar(rol) || puedeConsultar(rol)
 }
