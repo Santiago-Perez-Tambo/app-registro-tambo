@@ -247,6 +247,20 @@ test('el tacto vacía cierra también las alertas de parto y secado', () => {
   assert.deepEqual(vigentes(alertas), [])
 })
 
+test('el tacto preñada cierra también los avisos de vaca sin celo', () => {
+  assert.deepEqual(cerrarCumplidas(evento(2, 'tacto', '2026-12-01', { resultado_tacto: 'preñada' })), [
+    'tacto',
+    'sin_celo',
+    'inducir_celo',
+  ])
+  const { alertas } = confirmarEnOrden(SECA_PRENADA, [
+    evento(1, 'parto', '2026-08-01'),
+    evento(2, 'tacto', '2026-10-20', { resultado_tacto: 'preñada', edad_gestacional: 40 }),
+  ])
+  assert.deepEqual(vigentes(alertas), [['parto', '2027-06-20'], ['secado', '2027-04-21']])
+  assert.deepEqual(cumplidas(alertas).map(([tipo]) => tipo), ['sin_celo', 'inducir_celo'])
+})
+
 test('el parto cierra también la alerta de tacto', () => {
   assert.deepEqual(cerrarCumplidas(evento(2, 'parto', '2026-10-01')), ['parto', 'secado', 'tacto'])
   const { alertas } = confirmarEnOrden(SECA_PRENADA, [evento(1, 'servicio', '2026-09-01'), evento(2, 'parto', '2026-10-01')])

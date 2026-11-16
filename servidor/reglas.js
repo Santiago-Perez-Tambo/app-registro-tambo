@@ -144,7 +144,7 @@ const ALERTAS_QUE_CIERRA = {
 
 export function cerrarCumplidas(evento) {
   if (evento.tipo_evento === 'tacto') {
-    return evento.resultado_tacto === 'vacía' ? ['tacto', 'parto', 'secado'] : ['tacto']
+    return evento.resultado_tacto === 'vacía' ? ['tacto', 'parto', 'secado'] : ['tacto', 'sin_celo', 'inducir_celo']
   }
   return ALERTAS_QUE_CIERRA[evento.tipo_evento] ?? []
 }
