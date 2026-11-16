@@ -7,7 +7,17 @@ export function normalizarCaravana(texto) {
   return (texto ?? '').trim().toUpperCase()
 }
 
-export function validarAlta(datos) {
+function validarFechas(datos, hoy) {
+  if (datos.fecha_nacimiento && datos.fecha_nacimiento > hoy) {
+    return 'La fecha de nacimiento no puede ser posterior a hoy.'
+  }
+  if (datos.fecha_nacimiento && datos.fecha_ingreso && datos.fecha_ingreso < datos.fecha_nacimiento) {
+    return 'La fecha de ingreso no puede ser anterior a la de nacimiento.'
+  }
+  return ''
+}
+
+export function validarAlta(datos, hoy) {
   const caravana = normalizarCaravana(datos.caravana)
   if (!caravana) {
     return 'Escribí la caravana.'
@@ -24,7 +34,7 @@ export function validarAlta(datos) {
   if (normalizarCaravana(datos.madre) === caravana) {
     return 'La madre no puede ser el mismo animal.'
   }
-  return ''
+  return validarFechas(datos, hoy)
 }
 
 export function esCaravanaRepetida(error) {

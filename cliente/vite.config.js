@@ -11,8 +11,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,woff2}'],
       },
       manifest: {
-        name: 'Registro Tambo',
-        short_name: 'Tambo',
+        name: 'Mi tambo',
+        short_name: 'Mi tambo',
         lang: 'es',
         background_color: '#FBF8EF',
         theme_color: '#145A32',

@@ -323,6 +323,10 @@ function resumirAnimal(animal, eventos, alertas, parametros) {
   }
 }
 
+export function copiaEsDeOtroUsuario(duenoGuardado, idUsuario) {
+  return duenoGuardado !== String(idUsuario)
+}
+
 export function armarCopiaDelRodeo(animales, eventos, alertas, parametros) {
   const eventosPorAnimal = agruparPorAnimal(eventos)
   const alertasPorAnimal = agruparPorAnimal(alertas)

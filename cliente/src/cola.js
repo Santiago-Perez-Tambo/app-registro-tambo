@@ -7,7 +7,7 @@ import {
   siguienteParaEnviar,
   sumarUltimaVaca,
 } from './captura.js'
-import { armarCopiaDelRodeo } from './historia.js'
+import { armarCopiaDelRodeo, copiaEsDeOtroUsuario } from './historia.js'
 import { enviarCaptura } from './servidor.js'
 import {
   leerAlertasVigentes,
@@ -26,6 +26,7 @@ base.version(2).stores({
 })
 
 const CLAVE_FECHA_COPIA = 'fecha_copia_rodeo'
+const CLAVE_USUARIO_COPIA = 'usuario_copia_rodeo'
 const CANTIDAD_ULTIMAS_VACAS = 6
 
 let vueltaEnCurso = false
@@ -69,6 +70,18 @@ async function pisarCopiaRodeo() {
   } catch (error) {
     console.error(error)
     return false
+  }
+}
+
+export async function vaciarCopiaDeOtroUsuario(idUsuario) {
+  try {
+    if (copiaEsDeOtroUsuario(localStorage.getItem(CLAVE_USUARIO_COPIA), idUsuario)) {
+      await base.rodeo.clear()
+      localStorage.removeItem(CLAVE_FECHA_COPIA)
+      localStorage.setItem(CLAVE_USUARIO_COPIA, String(idUsuario))
+    }
+  } catch (error) {
+    console.error(error)
   }
 }
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Boton from '../../componentes/Boton.jsx'
 import Encabezado from '../../componentes/Encabezado.jsx'
 import { CATEGORIAS, ESTADOS, mostrarPalabra, validarAlta } from '../../animal.js'
+import { hoyArgentina } from '../../historia.js'
 import { useSesion } from '../../sesion.jsx'
 import { altaAnimal } from '../../supabase.js'
 
@@ -88,7 +89,7 @@ function AltaAnimal() {
   async function guardarAnimal(evento) {
     evento.preventDefault()
     cambiarListo('')
-    const error = validarAlta(formulario)
+    const error = validarAlta(formulario, hoyArgentina())
     if (error) {
       cambiarAviso({ campo: '', mensaje: error })
       return

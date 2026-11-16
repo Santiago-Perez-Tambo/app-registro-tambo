@@ -53,6 +53,7 @@ const DIAS_REVISADOS = 30
 const UNA_COLUMNA = '(max-width: 799px)'
 const SIN_SELECCION = { id: null, indice: 0 }
 const SIN_RESULTADO = { mensaje: '', aviso: '' }
+const AVISO_ESPERA = 'Esperando al servidor. Si estaba dormido, puede tardar un minuto.'
 
 function verAsientos(asientos, vista) {
   return ordenarAsientos(filtrarAsientos(asientos, vista), vista.orden)
@@ -681,9 +682,10 @@ function programarBorrado(hayAlgo, borrar, espera) {
   return () => clearTimeout(reloj)
 }
 
-function ResultadoDeLaAccion({ resultado }) {
+function ResultadoDeLaAccion({ resultado, enviando }) {
   return (
     <div role="status">
+      {enviando && <p className="mensaje-aviso mensaje-resultado">{AVISO_ESPERA}</p>}
       {resultado.mensaje && <p className="mensaje-correcto mensaje-resultado">{resultado.mensaje}</p>}
       {resultado.aviso && <p className="mensaje-aviso mensaje-resultado">{resultado.aviso}</p>}
     </div>
@@ -744,7 +746,7 @@ function VistaDeAsientos({ asientos, enviando, hacer, resultado, vecesHecho, alE
       <div className="por-confirmar">
         <ListaAsientos asientos={visibles} idElegido={elegido?.id_captura} alElegir={elegir} />
         <div className="columna-detalle" ref={refColumna}>
-          <ResultadoDeLaAccion resultado={resultado} />
+          <ResultadoDeLaAccion resultado={resultado} enviando={enviando} />
           {elegido && <DetalleDelElegido key={elegido.id_captura} asiento={elegido} enviando={enviando} hacer={hacer} />}
         </div>
       </div>
@@ -752,10 +754,10 @@ function VistaDeAsientos({ asientos, enviando, hacer, resultado, vecesHecho, alE
   )
 }
 
-function ListaVacia({ resultado }) {
+function ListaVacia({ resultado, enviando }) {
   return (
     <>
-      <ResultadoDeLaAccion resultado={resultado} />
+      <ResultadoDeLaAccion resultado={resultado} enviando={enviando} />
       <p className="mensaje-vacio">No hay asientos por confirmar.</p>
     </>
   )
@@ -785,7 +787,7 @@ function PanelDeAsientos({ asientos, recargar }) {
     <>
       <FranjaDeResultado franja={franja} alCerrar={() => cambiarFranja(null)} />
       {asientos.length === 0 ? (
-        <ListaVacia resultado={resultado} />
+        <ListaVacia resultado={resultado} enviando={enviando} />
       ) : (
         <VistaDeAsientos
           asientos={asientos}

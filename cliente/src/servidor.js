@@ -55,10 +55,19 @@ function mensajeDeError(status, cuerpo) {
   return cuerpo?.error ?? AVISO_SIN_DETALLE
 }
 
+async function pedirToken(leer) {
+  try {
+    return await leer()
+  } catch (error) {
+    console.error(error)
+    throw new Error(AVISO_SIN_CONEXION)
+  }
+}
+
 async function pedirConSesion(ruta, metodo, datos) {
-  let resultado = await llamar(ruta, metodo, datos, await leerTokenVigente())
+  let resultado = await llamar(ruta, metodo, datos, await pedirToken(leerTokenVigente))
   if (resultado.status === 401) {
-    const tokenNuevo = await renovarToken()
+    const tokenNuevo = await pedirToken(renovarToken)
     if (tokenNuevo) {
       resultado = await llamar(ruta, metodo, datos, tokenNuevo)
     }

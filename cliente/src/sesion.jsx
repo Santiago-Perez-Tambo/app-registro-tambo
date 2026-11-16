@@ -1,5 +1,6 @@
 import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState } from 'react'
+import { vaciarCopiaDeOtroUsuario } from './cola.js'
 import { rolHabilitado } from './permisos.js'
 import { buscarFilaUsuario, cerrarSesionLocal, entrarConCorreo, escucharCambiosDeSesion, salirDeSupabase } from './supabase.js'
 
@@ -56,6 +57,7 @@ export function SesionProveedor({ children }) {
     try {
       const fila = await buscarFilaUsuario(idDeAuth)
       if (fila && rolHabilitado(fila.rol)) {
+        await vaciarCopiaDeOtroUsuario(fila.id_usuario)
         guardarUsuario(fila)
         cambiarUsuario(fila)
       } else {

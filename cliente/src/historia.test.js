@@ -7,6 +7,7 @@ import {
   cantidadDePartos,
   confirmadoPor,
   contarPorTipo,
+  copiaEsDeOtroUsuario,
   cuandoFueElEvento,
   datoDelProximo,
   detalleDelEvento,
@@ -328,4 +329,10 @@ test('la copia del rodeo suma a cada vaca los días de calostro, sus partos, sus
     [a200.partos, a200.fecha_ultimo_parto, a200.inicio_lactancia, a200.ultimos_eventos, a200.alertas],
     [0, null, null, [], []],
   )
+})
+
+test('la copia del rodeo se vacía si es de otro usuario o no tiene dueño anotado', () => {
+  assert.equal(copiaEsDeOtroUsuario('4', 4), false)
+  assert.equal(copiaEsDeOtroUsuario('4', 7), true)
+  assert.equal(copiaEsDeOtroUsuario(null, 4), true)
 })

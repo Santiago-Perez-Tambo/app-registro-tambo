@@ -36,6 +36,27 @@ test('el alta rechaza un estado fuera de la lista y una madre igual a la cría',
   assert.equal(validarAlta({ caravana: 'A183', categoria: 'ternera', madre: 'A011' }), '')
 })
 
+test('el alta rechaza un nacimiento posterior a hoy y un ingreso anterior al nacimiento', () => {
+  const hoy = '2026-11-16'
+  const ternera = { caravana: 'A183', categoria: 'ternera' }
+  assert.equal(
+    validarAlta({ ...ternera, fecha_nacimiento: '2026-11-17' }, hoy),
+    'La fecha de nacimiento no puede ser posterior a hoy.',
+  )
+  assert.equal(
+    validarAlta({ ...ternera, fecha_nacimiento: '2026-10-01', fecha_ingreso: '2026-09-30' }, hoy),
+    'La fecha de ingreso no puede ser anterior a la de nacimiento.',
+  )
+})
+
+test('el alta acepta nacer hoy, entrar el mismo día y dejar las fechas vacías', () => {
+  const hoy = '2026-11-16'
+  const ternera = { caravana: 'A183', categoria: 'ternera' }
+  assert.equal(validarAlta({ ...ternera, fecha_nacimiento: hoy, fecha_ingreso: hoy }, hoy), '')
+  assert.equal(validarAlta({ ...ternera, fecha_nacimiento: '', fecha_ingreso: '2020-01-01' }, hoy), '')
+  assert.equal(validarAlta({ ...ternera, fecha_nacimiento: '', fecha_ingreso: '' }, hoy), '')
+})
+
 test('el error de dato repetido de la base se reconoce como caravana repetida', () => {
   assert.equal(esCaravanaRepetida({ code: '23505' }), true)
   assert.equal(esCaravanaRepetida({ code: '23503' }), false)
