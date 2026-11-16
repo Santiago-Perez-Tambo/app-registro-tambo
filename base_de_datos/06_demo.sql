@@ -5,9 +5,9 @@ SELECT (now() AT TIME ZONE 'America/Argentina/Cordoba')::date AS hoy;
 
 CREATE TEMP TABLE demo_usuario (correo varchar(120), nombre varchar(80), rol varchar(20)) ON COMMIT DROP;
 INSERT INTO demo_usuario VALUES
-  ('demo.propietario@example.com', 'Propietario demo', 'propietario'),
-  ('demo.tambero@example.com', 'Tambero demo', 'tambero'),
-  ('demo.veterinario@example.com', 'Veterinario demo', 'asesor');
+  ('propi@tambo.test', 'Propietario demo', 'propietario'),
+  ('tamb@tambo.test', 'Tambero demo', 'tambero'),
+  ('vet@tambo.test', 'Veterinario demo', 'asesor');
 
 DO $$
 DECLARE
