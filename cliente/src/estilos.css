@@ -1087,9 +1087,6 @@ a.boton {
 
   .menu-lateral {
     position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
     gap: 8px;
     height: auto;
     padding: 8px 12px;
@@ -1097,24 +1094,21 @@ a.boton {
     border-bottom: 2px solid var(--color-borde);
   }
 
-  .menu-nombre,
-  .nombre-usuario {
+  .menu-nombre {
     display: none;
   }
 
   .enlaces-menu {
-    flex: 1 1 0;
-    flex-direction: row;
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: thin;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .enlace-menu {
-    flex: none;
     min-height: 44px;
     box-sizing: border-box;
     padding: 8px 10px;
+    font-size: 1rem;
     white-space: nowrap;
   }
 
@@ -1129,7 +1123,15 @@ a.boton {
   }
 
   .menu-lateral .pie-usuario {
-    display: contents;
+    justify-content: space-between;
+    gap: 4px 8px;
+    margin-left: 0;
+    font-size: 0.9375rem;
+  }
+
+  .menu-lateral .nombre-usuario {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .menu-lateral .mensaje-aviso {
@@ -1140,7 +1142,8 @@ a.boton {
   .menu-lateral .boton {
     flex: none;
     width: auto;
-    min-height: 48px;
+    min-height: 44px;
+    padding: 4px 16px;
     font-size: 1rem;
   }
 
