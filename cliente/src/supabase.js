@@ -3,6 +3,7 @@ import { esCaravanaRepetida, mensajeCaravanaRepetida, normalizarCaravana } from 
 import { armarAsiento, quedanPorConfirmar } from './asiento.js'
 import { segundosDeLaRuta } from './captura.js'
 import { avisosParaMostrar, textoPorQue } from './historia.js'
+import { faltoRespuestaDeSupabase } from './permisos.js'
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_KEY)
 const COLUMNAS_DEL_EVENTO =
@@ -29,10 +30,11 @@ export async function entrarConCorreo(correo, contrasena) {
 }
 
 export async function salirDeSupabase() {
-  const { error } = await supabase.auth.signOut()
-  if (error) {
+  const { error } = await supabase.auth.getUser()
+  if (faltoRespuestaDeSupabase(error)) {
     throw error
   }
+  await cerrarSesionLocal()
 }
 
 export async function buscarFilaUsuario(idAuth) {

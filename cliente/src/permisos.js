@@ -31,6 +31,10 @@ export function puedeRevisar(usuario, asiento) {
   return usuario.rol === 'asesor' && asiento.id_usuario === usuario.id_usuario
 }
 
+export function faltoRespuestaDeSupabase(error) {
+  return Boolean(error) && (!error.status || error.status >= 500)
+}
+
 export function pantallaInicial(rol, ancho) {
   if (!rolHabilitado(rol)) {
     return null

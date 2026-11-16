@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  faltoRespuestaDeSupabase,
   pantallaInicial,
   puedeCapturar,
   puedeEntrar,
@@ -113,4 +114,15 @@ test('solo los tres roles capturan', () => {
   }
   assert.equal(puedeCapturar('visitante'), false)
   assert.equal(puedeCapturar(undefined), false)
+})
+
+test('la salida se frena solo si Supabase no contestó', () => {
+  assert.equal(faltoRespuestaDeSupabase(null), false)
+  assert.equal(faltoRespuestaDeSupabase({ status: 0 }), true)
+  assert.equal(faltoRespuestaDeSupabase({}), true)
+  assert.equal(faltoRespuestaDeSupabase({ status: 500 }), true)
+  assert.equal(faltoRespuestaDeSupabase({ status: 503 }), true)
+  assert.equal(faltoRespuestaDeSupabase({ status: 400 }), false)
+  assert.equal(faltoRespuestaDeSupabase({ status: 401 }), false)
+  assert.equal(faltoRespuestaDeSupabase({ status: 403 }), false)
 })
