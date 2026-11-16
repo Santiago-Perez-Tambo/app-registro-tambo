@@ -1,7 +1,8 @@
 BEGIN;
 
 CREATE TEMP TABLE demo_hoy ON COMMIT DROP AS
-SELECT (now() AT TIME ZONE 'America/Argentina/Cordoba')::date AS hoy;
+SELECT (now() AT TIME ZONE 'America/Argentina/Cordoba')::date AS hoy,
+       date_trunc('second', now() AT TIME ZONE 'America/Argentina/Cordoba') AS ahora;
 
 CREATE TEMP TABLE demo_usuario (correo varchar(120), nombre varchar(80), rol varchar(20)) ON COMMIT DROP;
 INSERT INTO demo_usuario VALUES
@@ -159,7 +160,8 @@ CREATE TEMP TABLE demo_evento (
   sexo_ternero char(1),
   texto text,
   estado varchar(15),
-  id_captura uuid DEFAULT gen_random_uuid()
+  id_captura uuid DEFAULT gen_random_uuid(),
+  fecha_hora timestamp
 ) ON COMMIT DROP;
 
 INSERT INTO demo_evento (caravana, dias, hora, cargo, tipo_evento, tipo_servicio, toro, resultado_tacto,
@@ -217,14 +219,21 @@ INSERT INTO demo_evento (caravana, dias, hora, cargo, tipo_evento, tipo_servicio
   ('A003', -30, '07:30', 'tambero', 'servicio', 'inseminación', '512', null, null, null, null, 'inseminada con el toro 512', 'confirmada'),
   ('A021', -100, '07:25', 'tambero', 'servicio', 'inseminación', '377', null, null, null, null, 'inseminada con el toro 377', 'confirmada'),
   ('A021', -55, '10:15', 'asesor', 'tacto', null, null, 'preñada', 45, null, null, 'tacto preñada de 45 días', 'confirmada'),
-  ('A008', 0, '06:35', 'tambero', 'servicio', 'inseminación', '512', null, null, null, null, 'inseminada hoy con el toro 512', 'interpretada'),
-  ('A138', 0, '06:41', 'tambero', 'servicio', 'inseminación', null, null, null, null, null, 'inseminada hoy, la pajuela no se lee bien, 51 y algo', 'interpretada'),
-  ('A090', 0, '06:52', 'tambero', 'secado', null, null, null, null, 'preñez', null, 'secamos la 90 y la 14, las dos por preñez', 'interpretada');
+  ('A008', 0, null, 'tambero', 'servicio', 'inseminación', '512', null, null, null, null, 'inseminada hoy con el toro 512', 'interpretada'),
+  ('A138', 0, null, 'tambero', 'servicio', 'inseminación', null, null, null, null, null, 'inseminada hoy, la pajuela no se lee bien, 51 y algo', 'interpretada'),
+  ('A090', 0, null, 'tambero', 'secado', null, null, null, null, 'preñez', null, 'secamos la 90 y la 14, las dos por preñez', 'interpretada');
+
+UPDATE demo_evento d SET fecha_hora = h.hoy + d.dias + d.hora
+FROM demo_hoy h
+WHERE d.hora IS NOT NULL;
+
+UPDATE demo_evento d SET fecha_hora = h.ahora - v.minutos * interval '1 minute'
+FROM demo_hoy h, (VALUES ('A008', 90), ('A138', 80), ('A090', 70)) AS v(caravana, minutos)
+WHERE d.caravana = v.caravana AND d.estado = 'interpretada';
 
 INSERT INTO captura (id_captura, id_usuario, id_animal, fecha_hora, tipo_captura, texto, transcripcion, estado)
-SELECT d.id_captura, u.id_usuario, a.id_animal, h.hoy + d.dias + d.hora, 'texto', d.texto, d.texto, d.estado
+SELECT d.id_captura, u.id_usuario, a.id_animal, d.fecha_hora, 'texto', d.texto, d.texto, d.estado
 FROM demo_evento d
-CROSS JOIN demo_hoy h
 JOIN animal a ON a.id_establecimiento = 2 AND a.caravana = d.caravana
 JOIN demo_usuario du ON du.rol = d.cargo
 JOIN usuario u ON u.id_establecimiento = 2 AND u.correo = du.correo;
@@ -233,15 +242,14 @@ INSERT INTO evento (id_animal, id_captura, id_usuario_confirma, tipo_evento, fec
                     resultado_tacto, edad_gestacional, motivo_secado, sexo_ternero, fecha_confirmacion)
 SELECT a.id_animal, d.id_captura,
        CASE WHEN d.estado = 'confirmada' THEN c.id_usuario END,
-       d.tipo_evento, h.hoy + d.dias, d.tipo_servicio, d.toro,
+       d.tipo_evento, d.fecha_hora::date, d.tipo_servicio, d.toro,
        d.resultado_tacto, d.edad_gestacional, d.motivo_secado, d.sexo_ternero,
-       CASE WHEN d.estado = 'confirmada' THEN h.hoy + d.dias + d.hora + interval '2 hours' END
+       CASE WHEN d.estado = 'confirmada' THEN d.fecha_hora + interval '2 hours' END
 FROM demo_evento d
-CROSS JOIN demo_hoy h
 JOIN animal a ON a.id_establecimiento = 2 AND a.caravana = d.caravana
 JOIN demo_usuario dc ON dc.rol = CASE WHEN d.cargo = 'asesor' THEN 'asesor' ELSE 'propietario' END
 JOIN usuario c ON c.id_establecimiento = 2 AND c.correo = dc.correo
-ORDER BY d.dias, d.hora;
+ORDER BY d.fecha_hora;
 
 INSERT INTO alerta (id_animal, id_evento_origen, tipo_alerta, fecha_objetivo, estado)
 SELECT e.id_animal, e.id_evento, v.tipo_alerta, h.hoy + v.dias, v.estado
