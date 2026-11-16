@@ -37,7 +37,6 @@ function capturaEnCola(id, fechaHora, cambios) {
     texto: 'se sirvió con toro',
     archivo: null,
     fecha_hora: fechaHora,
-    estado: 'en_celular',
     ...cambios,
   }
 }

@@ -8,7 +8,7 @@ const CANTIDAD_EVENTOS_EN_LA_COPIA = 5
 const ESTADOS_POR_CONFIRMAR = ['sincronizada', 'interpretada']
 const AVISOS_ANTICIPADOS = ['secado', 'parto']
 
-export const TIPOS_DE_AVISO = [
+const TIPOS_DE_AVISO = [
   { tipo: 'secado', nombre: 'Secar' },
   { tipo: 'parto', nombre: 'Parto' },
   { tipo: 'tacto', nombre: 'Tactar' },
@@ -172,7 +172,7 @@ export function confirmadoPor(rol) {
   return NOMBRES_DE_ROL[rol] ?? mostrarPalabra(rol)
 }
 
-export function ordenarDeMasNuevoAMasViejo(eventos) {
+function ordenarDeMasNuevoAMasViejo(eventos) {
   return [...eventos].sort(
     (uno, otro) =>
       otro.fecha_evento.localeCompare(uno.fecha_evento) ||

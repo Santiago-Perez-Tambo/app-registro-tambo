@@ -204,6 +204,35 @@ test('A008: el secado por baja producción de una vacía la deja seca y disponib
   assert.equal(animal.estado_reproductivo, 'vacía')
 })
 
+test('el secado de una servida sin tacto la deja seca, servida sin tacto y con el tacto pendiente', () => {
+  const { animal, alertas } = confirmarEnOrden(EN_ORDENE_SERVIDA, [
+    evento(1, 'servicio', '2026-08-01'),
+    evento(2, 'secado', '2026-10-01', { motivo_secado: 'baja producción' }),
+  ])
+  assert.equal(animal.categoria, 'vaca seca')
+  assert.equal(animal.estado_reproductivo, 'servida sin tacto')
+  assert.deepEqual(vigentes(alertas), [['tacto', '2026-09-15']])
+})
+
+test('borde del margen: un tacto que da la concepción a 15 días del servicio no deja advertencia', () => {
+  const { animal, advertencias } = confirmarEnOrden(EN_ORDENE_SERVIDA, [
+    evento(1, 'servicio', '2026-05-16'),
+    evento(2, 'tacto', '2026-09-07', { resultado_tacto: 'preñada', edad_gestacional: 99 }),
+  ])
+  assert.equal(animal.estado_reproductivo, 'preñada')
+  assert.deepEqual(advertencias, [])
+})
+
+test('borde del margen: un tacto que da la concepción a 16 días del servicio marca el servicio', () => {
+  const { animal, advertencias } = confirmarEnOrden(EN_ORDENE_SERVIDA, [
+    evento(1, 'servicio', '2026-05-16'),
+    evento(2, 'tacto', '2026-09-07', { resultado_tacto: 'preñada', edad_gestacional: 98 }),
+  ])
+  assert.equal(animal.estado_reproductivo, 'preñada')
+  assert.deepEqual(tiposDeAdvertencia(advertencias), [[1, 'servicio_no_coincidente', false]])
+  assert.equal(advertencias[0].detalle, 'El tacto del 07/09 da la concepción el 01/06, a 16 días de este servicio')
+})
+
 test('caso 13, A013: el parto la pasa a vaca en ordeñe y crea los avisos de celo', () => {
   const { animal, alertas } = confirmarEnOrden(SECA_PRENADA, [
     evento(1, 'tacto', '2026-04-01', { resultado_tacto: 'preñada', edad_gestacional: 120 }),

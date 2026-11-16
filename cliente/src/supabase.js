@@ -101,7 +101,7 @@ export async function leerRodeo() {
   await exigirSesionVigente()
   const { data, error } = await supabase
     .from('animal')
-    .select('id_animal, caravana, categoria, estado_reproductivo, fecha_nacimiento, fecha_ingreso, id_madre')
+    .select('id_animal, caravana, categoria, estado_reproductivo')
     .is('fecha_baja', null)
     .order('caravana')
   if (error) {

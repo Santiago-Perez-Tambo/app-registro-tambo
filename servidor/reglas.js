@@ -1,5 +1,5 @@
 export const DIAS_GESTACION = 283
-export const MARGEN_COINCIDENCIA = 15
+const MARGEN_COINCIDENCIA = 15
 
 const UN_DIA = 24 * 60 * 60 * 1000
 const DETALLE_SIN_FECHA_PARTO = 'Preñada sin edad gestacional ni servicio: no se puede calcular el parto'

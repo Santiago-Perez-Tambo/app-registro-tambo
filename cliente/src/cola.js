@@ -107,7 +107,6 @@ export async function guardarCaptura({ idUsuario, animal, tipoCaptura, texto, ar
     archivo,
     duracion,
     fecha_hora: ahoraArgentina(),
-    estado: 'en_celular',
   }
   await base.capturas.add(captura)
   return captura.id_captura

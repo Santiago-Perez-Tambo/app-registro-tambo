@@ -11,7 +11,7 @@ const FORMATO_ARGENTINA = new Intl.DateTimeFormat('en-CA', {
   hourCycle: 'h23',
 })
 
-export const GRABACION_MINIMA = 1000
+const GRABACION_MINIMA = 1000
 export const GRABACION_MAXIMA = 60 * 1000
 
 const NOMBRES_DE_TIPO = {
