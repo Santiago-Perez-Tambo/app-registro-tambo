@@ -11,10 +11,16 @@ const FORMATO_ARGENTINA = new Intl.DateTimeFormat('en-CA', {
   hourCycle: 'h23',
 })
 
+export const GRABACION_MINIMA = 1000
+export const GRABACION_MAXIMA = 60 * 1000
+
 const NOMBRES_DE_TIPO = {
   texto: 'Escrito',
   foto: 'Foto',
+  audio: 'Audio',
 }
+
+const FORMA_RUTA_CON_DURACION = /-(\d+)s\.\w+$/
 
 const ESTADOS_CON_MOTIVO = [400, 403, 413]
 const MOTIVO_SIN_DETALLE = 'El servidor no aceptó el registro'
@@ -74,6 +80,39 @@ export function describirTipo(tipo) {
   return NOMBRES_DE_TIPO[tipo]
 }
 
+export function textoDuracion(segundos) {
+  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, '0')}`
+}
+
+export function describirCaptura(tipo, duracion) {
+  return duracion ? `${describirTipo(tipo)}, ${textoDuracion(duracion)}` : describirTipo(tipo)
+}
+
+export function seGuardaLaGrabacion(milisegundos) {
+  return milisegundos >= GRABACION_MINIMA
+}
+
+export function segundosDeGrabacion(milisegundos) {
+  const segundos = Math.round(milisegundos / 1000)
+  return Math.min(Math.max(segundos, 1), GRABACION_MAXIMA / 1000)
+}
+
+const AVISOS_DE_MICROFONO = {
+  NotAllowedError:
+    'El navegador no tiene permiso para usar el micrófono. Habilitalo tocando el candado al lado de la dirección (en el iPhone: Ajustes > Safari > Micrófono). Mientras tanto podés usar Foto o Escribir.',
+  NotFoundError: 'No se encontró un micrófono en este equipo. Podés usar Foto o Escribir.',
+}
+const AVISO_MICROFONO_SIN_DETALLE = 'No se pudo usar el micrófono. Probá de nuevo o usá Foto o Escribir.'
+
+export function avisoDeMicrofono(nombreDelError) {
+  return AVISOS_DE_MICROFONO[nombreDelError] ?? AVISO_MICROFONO_SIN_DETALLE
+}
+
+export function segundosDeLaRuta(ruta) {
+  const encontrada = typeof ruta === 'string' ? ruta.match(FORMA_RUTA_CON_DURACION) : null
+  return encontrada ? Number(encontrada[1]) : null
+}
+
 export function textoPendientes(cantidad) {
   if (cantidad === 1) {
     return '1 registro guardado en el celular'
@@ -98,10 +137,13 @@ export function camposParaEnviar(captura, archivoBase64) {
     texto: captura.texto,
     fecha_hora: captura.fecha_hora,
   }
-  if (captura.tipo_captura !== 'foto') {
-    return campos
+  if (captura.tipo_captura === 'foto') {
+    return { ...campos, archivo_base64: archivoBase64, tipo_archivo: captura.archivo.type }
   }
-  return { ...campos, archivo_base64: archivoBase64, tipo_archivo: captura.archivo.type }
+  if (captura.tipo_captura === 'audio') {
+    return { ...campos, archivo_base64: archivoBase64, duracion: captura.duracion }
+  }
+  return campos
 }
 
 export function queHacerConLaRespuesta(status, cuerpo) {
@@ -135,6 +177,15 @@ export function siguienteParaEnviar(capturas, intentadas, incluirConMotivo) {
     (captura) => !intentadas.has(captura.id_captura) && (incluirConMotivo || !captura.motivo),
   )
   return ordenarPorFechaHora(candidatas)[0] ?? null
+}
+
+export function claveUltimasVacas(idUsuario) {
+  return `ultimas-vacas-${idUsuario}`
+}
+
+export function sumarUltimaVaca(ultimas, caravana, cantidad) {
+  const otras = (Array.isArray(ultimas) ? ultimas : []).filter((guardada) => guardada !== caravana)
+  return [caravana, ...otras].slice(0, cantidad)
 }
 
 export function resumenDeVuelta({ enviadas, cortada }) {

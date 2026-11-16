@@ -2,9 +2,12 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   ahoraArgentina,
+  avisoDeMicrofono,
   avisoSalirConPendientes,
   camposParaEnviar,
+  claveUltimasVacas,
   contadorLetras,
+  describirCaptura,
   describirCuando,
   describirTipo,
   ordenarDeMasNuevaAMasVieja,
@@ -13,7 +16,12 @@ import {
   quitarPrefijoBase64,
   resumenDeVuelta,
   sacarLasQueSiguenEnCola,
+  segundosDeGrabacion,
+  segundosDeLaRuta,
+  seGuardaLaGrabacion,
   siguienteParaEnviar,
+  sumarUltimaVaca,
+  textoDuracion,
   textoFechaCopia,
   textoPendientes,
   validarTexto,
@@ -208,4 +216,72 @@ test('el resumen de la vuelta dice cuántos se enviaron y si se cortó', () => {
     'Se enviaron 2 registros. No se pudo enviar. Se vuelve a intentar solo cuando haya señal.',
   )
   assert.equal(resumenDeVuelta({ enviadas: 0, cortada: false }), '')
+})
+
+test('las últimas vacas se guardan con una clave por usuario', () => {
+  assert.equal(claveUltimasVacas(3), 'ultimas-vacas-3')
+  assert.notEqual(claveUltimasVacas(3), claveUltimasVacas(4))
+})
+
+test('la vaca vista pasa adelante, sin repetirse y con tope', () => {
+  assert.deepEqual(sumarUltimaVaca(['A100', 'A200', 'A300'], 'A200', 6), ['A200', 'A100', 'A300'])
+  assert.deepEqual(sumarUltimaVaca(['A100', 'A200'], 'A300', 2), ['A300', 'A100'])
+})
+
+test('si lo guardado no es una lista, arranca de cero', () => {
+  assert.deepEqual(sumarUltimaVaca(null, 'A100', 6), ['A100'])
+  assert.deepEqual(sumarUltimaVaca('roto', 'A100', 6), ['A100'])
+})
+
+test('la duración se muestra en minutos y segundos', () => {
+  assert.equal(textoDuracion(7), '0:07')
+  assert.equal(textoDuracion(42), '0:42')
+  assert.equal(textoDuracion(60), '1:00')
+})
+
+test('un audio en la lista dice cuánto dura y lo demás solo el tipo', () => {
+  assert.equal(describirCaptura('audio', 7), 'Audio, 0:07')
+  assert.equal(describirCaptura('audio', null), 'Audio')
+  assert.equal(describirCaptura('foto', undefined), 'Foto')
+})
+
+test('una grabación de menos de un segundo no se guarda', () => {
+  assert.equal(seGuardaLaGrabacion(999), false)
+  assert.equal(seGuardaLaGrabacion(1000), true)
+  assert.equal(seGuardaLaGrabacion(45000), true)
+})
+
+test('los segundos de la grabación se redondean y no pasan del tope de 60', () => {
+  assert.equal(segundosDeGrabacion(1000), 1)
+  assert.equal(segundosDeGrabacion(7400), 7)
+  assert.equal(segundosDeGrabacion(7600), 8)
+  assert.equal(segundosDeGrabacion(60030), 60)
+})
+
+test('la duración del audio se lee del nombre del archivo', () => {
+  assert.equal(segundosDeLaRuta('1/3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b-7s.webm'), 7)
+  assert.equal(segundosDeLaRuta('2/3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b-42s.mp4'), 42)
+  assert.equal(segundosDeLaRuta('1/3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b.jpg'), null)
+  assert.equal(segundosDeLaRuta(null), null)
+})
+
+test('un audio se envía con su archivo y su duración', () => {
+  const audio = { id_captura: 'x', id_animal: 7, tipo_captura: 'audio', texto: null, fecha_hora: '2026-11-16T08:00:00', duracion: 7 }
+  assert.deepEqual(camposParaEnviar(audio, 'GkXfow=='), {
+    id_captura: 'x',
+    id_animal: 7,
+    tipo_captura: 'audio',
+    texto: null,
+    fecha_hora: '2026-11-16T08:00:00',
+    archivo_base64: 'GkXfow==',
+    duracion: 7,
+  })
+})
+
+test('si el micrófono no tiene permiso se explica cómo habilitarlo y que hay Foto o Escribir', () => {
+  const aviso = avisoDeMicrofono('NotAllowedError')
+  assert.match(aviso, /permiso/)
+  assert.match(aviso, /Foto o Escribir/)
+  assert.match(avisoDeMicrofono('NotFoundError'), /No se encontró un micrófono/)
+  assert.match(avisoDeMicrofono('OtroError'), /No se pudo usar el micrófono/)
 })

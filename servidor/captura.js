@@ -1,8 +1,12 @@
 import { DIAS_GESTACION } from './reglas.js'
 
 const LARGO_MAXIMO_TEXTO = 280
-const TAMANO_MAXIMO_FOTO = 5 * 1024 * 1024
+const TAMANO_MAXIMO_ARCHIVO = 5 * 1024 * 1024
 const INICIO_JPEG = Buffer.from([0xff, 0xd8, 0xff])
+const INICIO_WEBM = Buffer.from([0x1a, 0x45, 0xdf, 0xa3])
+const MARCA_MP4 = 'ftyp'
+const DURACION_MAXIMA_AUDIO = 60
+export const TIPOS_DE_AUDIO = { webm: 'audio/webm', mp4: 'audio/mp4' }
 const FORMA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const FORMA_FECHA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
 const TOLERANCIA_RELOJ = 24 * 60 * 60 * 1000
@@ -84,10 +88,39 @@ function validarFoto(archivoBase64, tipoArchivo) {
   if (tipoArchivo !== 'image/jpeg' || !empiezaComoJpeg(archivoBase64)) {
     return 'La foto tiene que ser JPEG'
   }
-  if (Buffer.byteLength(archivoBase64, 'base64') > TAMANO_MAXIMO_FOTO) {
-    return 'La foto pasa de 5 MB'
+  return null
+}
+
+export function formatoDelAudio(archivoBase64) {
+  const primerosBytes = Buffer.from(archivoBase64.slice(0, 12), 'base64')
+  if (primerosBytes.subarray(0, 4).equals(INICIO_WEBM)) {
+    return 'webm'
+  }
+  if (primerosBytes.subarray(4, 8).toString('latin1') === MARCA_MP4) {
+    return 'mp4'
   }
   return null
+}
+
+function validarAudio(archivoBase64, duracion) {
+  if (typeof archivoBase64 !== 'string' || archivoBase64.length === 0) {
+    return 'Falta el archivo del audio'
+  }
+  if (!formatoDelAudio(archivoBase64)) {
+    return 'El audio tiene que ser webm o mp4'
+  }
+  if (!Number.isInteger(duracion) || duracion < 1 || duracion > DURACION_MAXIMA_AUDIO) {
+    return `La duración del audio tiene que ser de 1 a ${DURACION_MAXIMA_AUDIO} segundos`
+  }
+  return null
+}
+
+export function archivoPasaDelTope(datos) {
+  const archivo = datos.archivo_base64
+  if (typeof archivo !== 'string' || Buffer.byteLength(archivo, 'base64') <= TAMANO_MAXIMO_ARCHIVO) {
+    return null
+  }
+  return datos.tipo_captura === 'audio' ? 'El audio pasa de 5 MB' : 'La foto pasa de 5 MB'
 }
 
 export function validarCaptura(datos) {
@@ -107,11 +140,22 @@ export function validarCaptura(datos) {
   if (datos.tipo_captura === 'foto') {
     return validarFoto(datos.archivo_base64, datos.tipo_archivo)
   }
+  if (datos.tipo_captura === 'audio') {
+    return validarAudio(datos.archivo_base64, datos.duracion)
+  }
   return 'El tipo de captura no es válido'
 }
 
-export function rutaDelArchivo(idEstablecimiento, idCaptura) {
-  return `${idEstablecimiento}/${idCaptura}.jpg`
+export function rutaDelArchivo(idEstablecimiento, datos) {
+  if (datos.tipo_captura === 'audio') {
+    return `${idEstablecimiento}/${datos.id_captura}-${datos.duracion}s.${formatoDelAudio(datos.archivo_base64)}`
+  }
+  return `${idEstablecimiento}/${datos.id_captura}.jpg`
+}
+
+export function tipoDelArchivo(ruta) {
+  const extension = ruta.split('.').at(-1)
+  return TIPOS_DE_AUDIO[extension] ?? 'image/jpeg'
 }
 
 export function esArchivoRepetido(error) {
@@ -401,6 +445,8 @@ function otrasCaravanas(nombradas, elegida, caravanasDelRodeo) {
   return otras
 }
 
+const ORIGEN_DE_LA_CAPTURA = { texto: 'El texto', foto: 'La foto', audio: 'El audio' }
+
 function unirConY(lista) {
   return lista.length === 1 ? lista[0] : `${lista.slice(0, -1).join(', ')} y ${lista.at(-1)}`
 }
@@ -411,7 +457,7 @@ export function advertenciaDeCaravanas(nombradas, caravanaElegida, caravanasDelR
   if (otras.length === 0) {
     return null
   }
-  const origen = tipoCaptura === 'foto' ? 'La foto' : 'El texto'
+  const origen = ORIGEN_DE_LA_CAPTURA[tipoCaptura] ?? 'El texto'
   return {
     tipo_advertencia: 'otra_caravana',
     detalle: `${origen} nombra ${unirConY(otras)}; el evento quedó en ${elegida}`,

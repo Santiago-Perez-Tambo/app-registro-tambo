@@ -1,6 +1,7 @@
 import { createClient, isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { esCaravanaRepetida, mensajeCaravanaRepetida, normalizarCaravana } from './animal.js'
 import { armarAsiento, quedanPorConfirmar } from './asiento.js'
+import { segundosDeLaRuta } from './captura.js'
 import { avisosParaMostrar, textoPorQue } from './historia.js'
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_KEY)
@@ -9,7 +10,7 @@ const COLUMNAS_DEL_EVENTO =
 const ESTADOS_POR_CONFIRMAR = ['sincronizada', 'interpretada']
 const ESTADOS_REVISADOS = ['confirmada', 'rechazada']
 const COLUMNAS_DEL_ASIENTO = [
-  'id_captura, id_usuario, fecha_hora, tipo_captura, texto, transcripcion, estado',
+  'id_captura, id_usuario, fecha_hora, tipo_captura, texto, transcripcion, archivo, estado',
   'animal(caravana, categoria, estado_reproductivo)',
   'usuario(nombre, rol)',
   'evento(id_evento, id_usuario_confirma, fecha_confirmacion, tipo_evento, fecha_evento, tipo_servicio, toro, resultado_tacto, edad_gestacional, motivo_secado, sexo_ternero, animal(caravana, categoria, estado_reproductivo), usuario(nombre), advertencia(id_advertencia, tipo_advertencia, detalle, resuelta))',
@@ -79,7 +80,7 @@ export async function leerEnviadosHoy(idUsuario, dia) {
   await exigirSesionVigente()
   const { data, error } = await supabase
     .from('captura')
-    .select('id_captura, tipo_captura, fecha_hora, animal(caravana)')
+    .select('id_captura, tipo_captura, fecha_hora, archivo, animal(caravana)')
     .eq('id_usuario', idUsuario)
     .gte('fecha_hora', `${dia}T00:00:00`)
     .lte('fecha_hora', `${dia}T23:59:59`)
@@ -91,6 +92,7 @@ export async function leerEnviadosHoy(idUsuario, dia) {
     id_captura: fila.id_captura,
     tipo_captura: fila.tipo_captura,
     fecha_hora: fila.fecha_hora,
+    duracion: segundosDeLaRuta(fila.archivo),
     caravana: fila.animal?.caravana,
   }))
 }

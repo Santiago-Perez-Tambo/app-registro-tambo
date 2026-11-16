@@ -3,7 +3,10 @@ import assert from 'node:assert/strict'
 import {
   ahoraArgentina,
   validarCaptura,
+  archivoPasaDelTope,
+  formatoDelAudio,
   rutaDelArchivo,
+  tipoDelArchivo,
   esArchivoRepetido,
   esCapturaRepetida,
   puedeCapturar,
@@ -51,6 +54,28 @@ function capturaDeFoto(cambios) {
     texto: null,
     archivo_base64: fotoJpeg(100),
     tipo_archivo: 'image/jpeg',
+    ...cambios,
+  })
+}
+
+function audioWebm(tamano) {
+  const audio = Buffer.alloc(tamano)
+  audio.set([0x1a, 0x45, 0xdf, 0xa3])
+  return audio.toString('base64')
+}
+
+function audioMp4(tamano) {
+  const audio = Buffer.alloc(tamano)
+  audio.write('ftypM4A ', 4, 'latin1')
+  return audio.toString('base64')
+}
+
+function capturaDeAudio(cambios) {
+  return capturaDeTexto({
+    tipo_captura: 'audio',
+    texto: null,
+    archivo_base64: audioWebm(100),
+    duracion: 7,
     ...cambios,
   })
 }
@@ -148,13 +173,70 @@ test('una foto declarada jpeg que por dentro no lo es se rechaza', () => {
   assert.equal(validarCaptura(capturaDeFoto({ archivo_base64: png })), 'La foto tiene que ser JPEG')
 })
 
-test('una foto de más de 5 MB se rechaza', () => {
+test('una foto de más de 5 MB pasa del tope', () => {
   const fotoGrande = fotoJpeg(5 * 1024 * 1024 + 1)
-  assert.equal(validarCaptura(capturaDeFoto({ archivo_base64: fotoGrande })), 'La foto pasa de 5 MB')
+  assert.equal(archivoPasaDelTope(capturaDeFoto({ archivo_base64: fotoGrande })), 'La foto pasa de 5 MB')
+})
+
+test('un audio de más de 5 MB pasa del tope y uno de 5 MB justos no', () => {
+  const audioGrande = audioWebm(5 * 1024 * 1024 + 1)
+  assert.equal(archivoPasaDelTope(capturaDeAudio({ archivo_base64: audioGrande })), 'El audio pasa de 5 MB')
+  assert.equal(archivoPasaDelTope(capturaDeAudio({ archivo_base64: audioWebm(5 * 1024 * 1024) })), null)
+})
+
+test('un texto no tiene archivo y no pasa del tope', () => {
+  assert.equal(archivoPasaDelTope(capturaDeTexto()), null)
+})
+
+test('el tope de 5 MB en base64 entra en el límite de 8 MB del pedido', () => {
+  const base64DelTope = audioWebm(5 * 1024 * 1024)
+  assert.ok(base64DelTope.length < 8 * 1024 * 1024)
+})
+
+test('un audio webm o mp4 correcto no tiene error', () => {
+  assert.equal(validarCaptura(capturaDeAudio()), null)
+  assert.equal(validarCaptura(capturaDeAudio({ archivo_base64: audioMp4(100) })), null)
+})
+
+test('el formato del audio sale de los primeros bytes', () => {
+  assert.equal(formatoDelAudio(audioWebm(100)), 'webm')
+  assert.equal(formatoDelAudio(audioMp4(100)), 'mp4')
+  assert.equal(formatoDelAudio(fotoJpeg(100)), null)
+})
+
+test('un audio que por dentro no es webm ni mp4 se rechaza', () => {
+  assert.equal(
+    validarCaptura(capturaDeAudio({ archivo_base64: fotoJpeg(100) })),
+    'El audio tiene que ser webm o mp4',
+  )
+})
+
+test('un audio sin archivo se rechaza', () => {
+  assert.equal(validarCaptura(capturaDeAudio({ archivo_base64: '' })), 'Falta el archivo del audio')
+})
+
+test('la duración del audio tiene que ser un entero de 1 a 60 segundos', () => {
+  const aviso = 'La duración del audio tiene que ser de 1 a 60 segundos'
+  for (const duracion of [0, 61, 7.5, '7', undefined]) {
+    assert.equal(validarCaptura(capturaDeAudio({ duracion })), aviso)
+  }
+  assert.equal(validarCaptura(capturaDeAudio({ duracion: 1 })), null)
+  assert.equal(validarCaptura(capturaDeAudio({ duracion: 60 })), null)
 })
 
 test('la ruta del archivo va en la carpeta del establecimiento', () => {
-  assert.equal(rutaDelArchivo(1, ID_CAPTURA), `1/${ID_CAPTURA}.jpg`)
+  assert.equal(rutaDelArchivo(1, capturaDeFoto()), `1/${ID_CAPTURA}.jpg`)
+})
+
+test('la ruta del audio lleva la duración y la extensión del formato', () => {
+  assert.equal(rutaDelArchivo(1, capturaDeAudio()), `1/${ID_CAPTURA}-7s.webm`)
+  assert.equal(rutaDelArchivo(2, capturaDeAudio({ archivo_base64: audioMp4(100), duracion: 42 })), `2/${ID_CAPTURA}-42s.mp4`)
+})
+
+test('el tipo del archivo sale de la extensión de la ruta', () => {
+  assert.equal(tipoDelArchivo(`1/${ID_CAPTURA}-7s.webm`), 'audio/webm')
+  assert.equal(tipoDelArchivo(`1/${ID_CAPTURA}-7s.mp4`), 'audio/mp4')
+  assert.equal(tipoDelArchivo(`1/${ID_CAPTURA}.jpg`), 'image/jpeg')
 })
 
 test('un archivo que ya existe en Storage se reconoce como repetido', () => {
@@ -459,6 +541,10 @@ test('otra caravana nombrada en el texto se completa con el rodeo y se advierte'
     tipo_advertencia: 'otra_caravana',
     detalle: 'El texto nombra A127; el evento quedó en A100',
   })
+})
+
+test('otra caravana nombrada en el audio dice que la nombra el audio', () => {
+  assert.equal(advertenciaDeCaravanas(['127'], 'A100', RODEO, 'audio').detalle, 'El audio nombra A127; el evento quedó en A100')
 })
 
 test('una foto con varias vacas deja a la vista las otras caravanas sin repetirlas', () => {

@@ -1,5 +1,12 @@
 import Dexie from 'dexie'
-import { ahoraArgentina, ordenarPorFechaHora, queHacerConLaRespuesta, siguienteParaEnviar } from './captura.js'
+import {
+  ahoraArgentina,
+  claveUltimasVacas,
+  ordenarPorFechaHora,
+  queHacerConLaRespuesta,
+  siguienteParaEnviar,
+  sumarUltimaVaca,
+} from './captura.js'
 import { armarCopiaDelRodeo } from './historia.js'
 import { enviarCaptura } from './servidor.js'
 import {
@@ -19,7 +26,6 @@ base.version(2).stores({
 })
 
 const CLAVE_FECHA_COPIA = 'fecha_copia_rodeo'
-const CLAVE_ULTIMAS_VACAS = 'ultimas_vacas'
 const CANTIDAD_ULTIMAS_VACAS = 6
 
 let vueltaEnCurso = false
@@ -71,22 +77,26 @@ export async function actualizarRodeo() {
   return { ...(await leerCopiaRodeo()), actualizada }
 }
 
-export function ultimasVacas() {
+export function ultimasVacas(idUsuario) {
   try {
-    return JSON.parse(localStorage.getItem(CLAVE_ULTIMAS_VACAS)) ?? []
+    const guardadas = JSON.parse(localStorage.getItem(claveUltimasVacas(idUsuario)))
+    return Array.isArray(guardadas) ? guardadas : []
   } catch (error) {
     console.error(error)
     return []
   }
 }
 
-export function recordarVaca(caravana) {
-  const otras = ultimasVacas().filter((guardada) => guardada !== caravana)
-  const ultimas = [caravana, ...otras].slice(0, CANTIDAD_ULTIMAS_VACAS)
-  localStorage.setItem(CLAVE_ULTIMAS_VACAS, JSON.stringify(ultimas))
+export function recordarVaca(idUsuario, caravana) {
+  try {
+    const ultimas = sumarUltimaVaca(ultimasVacas(idUsuario), caravana, CANTIDAD_ULTIMAS_VACAS)
+    localStorage.setItem(claveUltimasVacas(idUsuario), JSON.stringify(ultimas))
+  } catch (error) {
+    console.error(error)
+  }
 }
 
-export async function guardarCaptura({ idUsuario, animal, tipoCaptura, texto, archivo }) {
+export async function guardarCaptura({ idUsuario, animal, tipoCaptura, texto, archivo, duracion }) {
   const captura = {
     id_captura: crypto.randomUUID(),
     id_usuario: idUsuario,
@@ -95,6 +105,7 @@ export async function guardarCaptura({ idUsuario, animal, tipoCaptura, texto, ar
     tipo_captura: tipoCaptura,
     texto,
     archivo,
+    duracion,
     fecha_hora: ahoraArgentina(),
     estado: 'en_celular',
   }

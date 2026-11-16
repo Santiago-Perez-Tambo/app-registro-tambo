@@ -95,6 +95,7 @@ function App() {
               <Route path="vaca/:caravana" element={<FichaVaca />} />
               <Route path="vaca/:caravana/escribir" element={<Capturar modo="texto" />} />
               <Route path="vaca/:caravana/foto" element={<Capturar modo="foto" />} />
+              <Route path="vaca/:caravana/hablar" element={<Capturar modo="voz" />} />
               <Route path="guardados" element={<Guardados />} />
               <Route path="avisos" element={<Avisos zona="celular" />} />
             </Route>

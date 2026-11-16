@@ -1,5 +1,11 @@
 import { formatearFecha, mostrarPalabra } from './animal.js'
-import { describirTipo, ordenarDeMasNuevaAMasVieja, ordenarPorFechaHora } from './captura.js'
+import {
+  describirTipo,
+  ordenarDeMasNuevaAMasVieja,
+  ordenarPorFechaHora,
+  segundosDeLaRuta,
+  textoDuracion,
+} from './captura.js'
 
 export const DIAS_GESTACION = 283
 export const LARGO_MAXIMO_TORO = 20
@@ -188,6 +194,7 @@ export function armarAsiento(fila) {
     tipo_captura: fila.tipo_captura,
     estado: fila.estado,
     lo_que_dijo: fila.transcripcion ?? fila.texto,
+    duracion: segundosDeLaRuta(fila.archivo),
     caravana: animal?.caravana,
     caravana_captura: fila.animal?.caravana,
     categoria: animal?.categoria,
@@ -268,7 +275,8 @@ export function tituloDelDetalle(asiento, caravana) {
 
 export function capturadoPor(asiento) {
   const quien = asiento.nombre_usuario || mostrarPalabra(asiento.rol_usuario)
-  return `${quien}, ${describirTipo(asiento.tipo_captura).toLowerCase()}`
+  const tipo = describirTipo(asiento.tipo_captura).toLowerCase()
+  return asiento.duracion ? `${quien}, ${tipo} ${textoDuracion(asiento.duracion)}` : `${quien}, ${tipo}`
 }
 
 export function fechaHoraCompleta(fechaHora) {

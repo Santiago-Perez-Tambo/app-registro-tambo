@@ -5,8 +5,8 @@ import Encabezado from '../../componentes/Encabezado.jsx'
 import { useSenal } from '../../componentes/IndicadorSenal.jsx'
 import {
   ahoraArgentina,
+  describirCaptura,
   describirCuando,
-  describirTipo,
   ordenarDeMasNuevaAMasVieja,
   resumenDeVuelta,
   sacarLasQueSiguenEnCola,
@@ -26,7 +26,7 @@ function FilaGuardado({ captura, estado, ahora }) {
   return (
     <li className="fila-guardado">
       <span className="caravana">{captura.caravana}</span>
-      <span>{describirTipo(captura.tipo_captura)}</span>
+      <span>{describirCaptura(captura.tipo_captura, captura.duracion)}</span>
       <span>{describirCuando(captura.fecha_hora, ahora)}</span>
       <span className={`etiqueta etiqueta-estado ${etiqueta.clase}`}>{etiqueta.texto}</span>
       {estado === 'celular' && captura.motivo && <p className="motivo">{captura.motivo}</p>}

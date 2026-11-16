@@ -99,6 +99,15 @@ test('cada fila dice el tipo propuesto y cómo se capturó', () => {
   assert.equal(textoDeFila(armarAsiento(filaDeCaptura({ evento: [] }))), 'Sin interpretar')
 })
 
+test('un audio dice en la fila que es audio y en el detalle cuánto duró', () => {
+  const audio = armarAsiento(filaDeCaptura({ tipo_captura: 'audio', archivo: '1/abc-7s.webm', texto: null }))
+  assert.equal(textoDeFila(audio), 'Servicio propuesto · Audio')
+  assert.equal(audio.duracion, 7)
+  assert.equal(capturadoPor(audio), 'Tambero, audio 0:07')
+  const sinDuracion = armarAsiento(filaDeCaptura({ tipo_captura: 'audio', archivo: null, texto: null }))
+  assert.equal(capturadoPor(sinDuracion), 'Tambero, audio')
+})
+
 test('el detalle lleva la caravana, el tipo, quién capturó, la fecha y el estado de la vaca', () => {
   const asiento = armarAsiento(filaDeCaptura())
   assert.equal(tituloDelDetalle(asiento, 'A100'), 'A100 · Servicio')

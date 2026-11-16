@@ -42,7 +42,7 @@ import {
 import { normalizarCaravana } from '../../animal.js'
 import { ahoraArgentina, describirCuando } from '../../captura.js'
 import { puedeRevisar } from '../../permisos.js'
-import { confirmarEvento, pedirFoto, rechazarEvento, reinterpretarCaptura } from '../../servidor.js'
+import { confirmarEvento, pedirArchivo, rechazarEvento, reinterpretarCaptura } from '../../servidor.js'
 import { useSesion } from '../../sesion.jsx'
 import { buscarIdAnimal, leerPorConfirmar, leerRevisados } from '../../supabase.js'
 
@@ -216,40 +216,56 @@ function ListaAsientos({ asientos, idElegido, alElegir }) {
   )
 }
 
-function FotoDeCaptura({ idCaptura }) {
+const TEXTOS_DEL_ARCHIVO = {
+  foto: { cargando: 'Cargando la foto', fallo: 'No se pudo mostrar la foto.' },
+  audio: { cargando: 'Cargando el audio', fallo: 'No se pudo reproducir el audio.' },
+}
+
+function ArchivoDeCaptura({ idCaptura, tipo }) {
   const [url, cambiarUrl] = useState('')
   const [aviso, cambiarAviso] = useState('')
-  const [pedidaDeNuevo, cambiarPedidaDeNuevo] = useState(false)
+  const [pedidoDeNuevo, cambiarPedidoDeNuevo] = useState(false)
+  const textos = TEXTOS_DEL_ARCHIVO[tipo]
 
   useEffect(() => {
-    traerFoto()
+    traerArchivo()
   }, [])
 
-  async function traerFoto() {
+  async function traerArchivo() {
     try {
-      cambiarUrl((await pedirFoto(idCaptura)).url)
+      cambiarUrl((await pedirArchivo(idCaptura)).url)
     } catch (error) {
       console.error(error)
       cambiarAviso(error.message)
     }
   }
 
-  function alFallarLaImagen() {
-    if (pedidaDeNuevo) {
-      cambiarAviso('No se pudo mostrar la foto.')
+  function alFallarElArchivo() {
+    if (pedidoDeNuevo) {
+      cambiarAviso(textos.fallo)
       return
     }
-    cambiarPedidaDeNuevo(true)
-    traerFoto()
+    cambiarPedidoDeNuevo(true)
+    traerArchivo()
   }
 
   if (aviso) {
     return <p className="mensaje-aviso">{aviso}</p>
   }
   if (!url) {
-    return <p>Cargando la foto</p>
+    return <p>{textos.cargando}</p>
   }
-  return <img src={url} alt="Foto de la captura" className="foto-captura" onError={alFallarLaImagen} />
+  if (tipo === 'audio') {
+    return <audio src={url} controls preload="metadata" className="audio-captura" onError={alFallarElArchivo} />
+  }
+  return <img src={url} alt="Foto de la captura" className="foto-captura" onError={alFallarElArchivo} />
+}
+
+function Transcripcion({ texto }) {
+  if (!texto) {
+    return <p className="mensaje-aviso">Todavía no se transcribió el audio.</p>
+  }
+  return <p className="lo-que-dijo">{texto}</p>
 }
 
 function ControlDelCampo({ campo, valor, alCambiar }) {
@@ -536,9 +552,14 @@ function LoQueDijo({ asiento }) {
   return (
     <>
       <h3>Lo que dijo</h3>
-      {asiento.tipo_captura === 'foto'
-        ? <FotoDeCaptura idCaptura={asiento.id_captura} />
-        : <p className="lo-que-dijo">{asiento.lo_que_dijo}</p>}
+      {asiento.tipo_captura === 'foto' && <ArchivoDeCaptura idCaptura={asiento.id_captura} tipo="foto" />}
+      {asiento.tipo_captura === 'audio' && (
+        <>
+          <ArchivoDeCaptura idCaptura={asiento.id_captura} tipo="audio" />
+          <Transcripcion texto={asiento.lo_que_dijo} />
+        </>
+      )}
+      {asiento.tipo_captura === 'texto' && <p className="lo-que-dijo">{asiento.lo_que_dijo}</p>}
     </>
   )
 }

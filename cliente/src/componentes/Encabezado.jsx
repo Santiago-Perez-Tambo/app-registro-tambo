@@ -15,9 +15,9 @@ function Encabezado({ titulo, volver }) {
   }, [state, pathname, navegar])
 
   return (
-    <header className="encabezado">
+    <header className={titulo ? 'encabezado' : 'encabezado encabezado-sin-titulo'}>
       {volver && <Link to={volver} className="boton boton-secundario boton-volver">Volver</Link>}
-      <h1>{titulo}</h1>
+      {titulo && <h1>{titulo}</h1>}
       <IndicadorSenal />
       {aviso && <p className="mensaje-aviso">{aviso}</p>}
     </header>

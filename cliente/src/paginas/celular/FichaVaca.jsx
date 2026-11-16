@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Encabezado from '../../componentes/Encabezado.jsx'
+import { Camara, Lapiz, Microfono } from '../../componentes/Iconos.jsx'
 import { mostrarPalabra, normalizarCaravana } from '../../animal.js'
 import { textoFechaCopia } from '../../captura.js'
 import { actualizarRodeo, buscarVacaEnCopia, recordarVaca } from '../../cola.js'
@@ -13,6 +14,7 @@ import {
   nombreDelEvento,
   textoParidaHace,
 } from '../../historia.js'
+import { useSesion } from '../../sesion.jsx'
 
 function enlaceCaptura(caravana, modo) {
   return `/celular/vaca/${encodeURIComponent(caravana)}/${modo}`
@@ -79,10 +81,15 @@ function DatosVaca({ animal }) {
     <>
       <TarjetaVaca animal={animal} hoy={hoy} />
       <LineaDeCalostro animal={animal} hoy={hoy} />
+      <Link to={enlaceCaptura(animal.caravana, 'hablar')} className="boton boton-principal boton-captura boton-hablar">
+        <Microfono /> Hablar
+      </Link>
       <div className="botones-captura">
-        <Link to={enlaceCaptura(animal.caravana, 'foto')} className="boton boton-principal boton-captura">Foto</Link>
-        <Link to={enlaceCaptura(animal.caravana, 'escribir')} className="boton boton-principal boton-captura">
-          Escribir
+        <Link to={enlaceCaptura(animal.caravana, 'foto')} className="boton boton-secundario boton-captura">
+          <Camara /> Foto
+        </Link>
+        <Link to={enlaceCaptura(animal.caravana, 'escribir')} className="boton boton-secundario boton-captura">
+          <Lapiz /> Escribir
         </Link>
       </div>
       <LoQuePaso eventos={animal.ultimos_eventos ?? []} hoy={hoy} />
@@ -91,6 +98,7 @@ function DatosVaca({ animal }) {
 }
 
 function FichaVaca() {
+  const { usuario } = useSesion()
   const { caravana } = useParams()
   const caravanaBuscada = normalizarCaravana(caravana)
   const [animal, cambiarAnimal] = useState(null)
@@ -122,7 +130,7 @@ function FichaVaca() {
         cambiarAnimal(encontrado)
       }
       if (encontrado) {
-        recordarVaca(buscada)
+        recordarVaca(usuario.id_usuario, buscada)
       } else {
         cambiarAviso(`La caravana ${buscada} no está en el rodeo`)
       }

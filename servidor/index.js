@@ -7,7 +7,9 @@ import { interpretarCaptura } from './interpretar.js'
 import {
   ahoraArgentina,
   validarCaptura,
+  archivoPasaDelTope,
   rutaDelArchivo,
+  tipoDelArchivo,
   esArchivoRepetido,
   esCapturaRepetida,
   esUuid,
@@ -22,7 +24,7 @@ import {
 import { calcularParaAnimal } from './reglas.js'
 
 const TAMANO_MAXIMO_PEDIDO = '8mb'
-const VENCIMIENTO_ENLACE_FOTO = 5 * 60
+const VENCIMIENTO_ENLACE = 5 * 60
 const AVISO_YA_REVISADO = 'Este asiento ya fue confirmado o rechazado'
 const DIAS_DEL_ESTABLECIMIENTO =
   'dias_servicio_tacto, dias_parto_secado, dias_calostro, dias_lactancia_primer_celo, dias_lactancia_induccion'
@@ -48,10 +50,10 @@ async function animalEsDelEstablecimiento(idAnimal, idEstablecimiento) {
   return data !== null
 }
 
-async function subirFoto(ruta, archivoBase64) {
+async function subirArchivo(ruta, archivoBase64) {
   const { error } = await supabase.storage
     .from(DEPOSITO_CAPTURAS)
-    .upload(ruta, Buffer.from(archivoBase64, 'base64'), { contentType: 'image/jpeg', upsert: false })
+    .upload(ruta, Buffer.from(archivoBase64, 'base64'), { contentType: tipoDelArchivo(ruta), upsert: false })
   if (error && !esArchivoRepetido(error)) {
     throw error
   }
@@ -83,6 +85,10 @@ async function guardarCaptura(fila) {
 
 async function recibirCaptura(pedido, respuesta) {
   const datos = pedido.body ?? {}
+  const errorDeTamano = archivoPasaDelTope(datos)
+  if (errorDeTamano) {
+    return respuesta.status(413).json({ error: errorDeTamano })
+  }
   const errorDeDatos = validarCaptura(datos)
   if (errorDeDatos) {
     return respuesta.status(400).json({ error: errorDeDatos })
@@ -93,9 +99,9 @@ async function recibirCaptura(pedido, respuesta) {
       return respuesta.status(403).json({ error: 'Ese animal no es de tu establecimiento' })
     }
     let archivo = null
-    if (datos.tipo_captura === 'foto') {
-      archivo = rutaDelArchivo(id_establecimiento, datos.id_captura)
-      await subirFoto(archivo, datos.archivo_base64)
+    if (datos.tipo_captura !== 'texto') {
+      archivo = rutaDelArchivo(id_establecimiento, datos)
+      await subirArchivo(archivo, datos.archivo_base64)
     }
     const fila = armarFilaDeCaptura(datos, pedido.usuario, archivo)
     const resultado = await guardarCaptura(fila)
@@ -109,8 +115,8 @@ async function recibirCaptura(pedido, respuesta) {
   }
 }
 
-function interpretarSinEsperar(captura, foto) {
-  interpretarCaptura(captura, foto).catch((error) => {
+function interpretarSinEsperar(captura, archivoBase64) {
+  interpretarCaptura(captura, archivoBase64).catch((error) => {
     console.error(`No se pudo interpretar la captura ${captura.id_captura}`, error)
   })
 }
@@ -119,7 +125,7 @@ async function buscarCaptura(idCaptura) {
   const { data, error } = await supabase
     .from('captura')
     .select(
-      'id_captura, id_usuario, id_animal, fecha_hora, tipo_captura, texto, archivo, estado, animal(id_establecimiento), evento(id_usuario_confirma)',
+      'id_captura, id_usuario, id_animal, fecha_hora, tipo_captura, texto, transcripcion, archivo, estado, animal(id_establecimiento), evento(id_usuario_confirma)',
     )
     .eq('id_captura', idCaptura)
     .maybeSingle()
@@ -367,27 +373,27 @@ async function rechazarAsiento(pedido, respuesta) {
 async function firmarEnlace(ruta) {
   const { data, error } = await supabase.storage
     .from(DEPOSITO_CAPTURAS)
-    .createSignedUrl(ruta, VENCIMIENTO_ENLACE_FOTO)
+    .createSignedUrl(ruta, VENCIMIENTO_ENLACE)
   if (error) {
     throw error
   }
   return data.signedUrl
 }
 
-async function darEnlaceDeFoto(pedido, respuesta) {
+async function darEnlaceDelArchivo(pedido, respuesta) {
   if (!puedeConsultar(pedido.usuario)) {
-    return respuesta.status(403).json({ error: 'Tu usuario no puede ver las fotos de las capturas' })
+    return respuesta.status(403).json({ error: 'Tu usuario no puede ver las fotos ni escuchar los audios' })
   }
   const { id_captura } = pedido.params
   try {
     const captura = esUuid(id_captura) ? await buscarCaptura(id_captura) : null
     if (esDeOtroEstablecimiento(captura, pedido.usuario) || !captura.archivo) {
-      return respuesta.status(404).json({ error: 'No se encontró la foto' })
+      return respuesta.status(404).json({ error: 'No se encontró el archivo de la captura' })
     }
     respuesta.json({ url: await firmarEnlace(captura.archivo) })
   } catch (error) {
     console.error(error)
-    respuesta.status(500).json({ error: 'No se pudo traer la foto. Probá de nuevo.' })
+    respuesta.status(500).json({ error: 'No se pudo traer el archivo. Probá de nuevo.' })
   }
 }
 
@@ -434,7 +440,7 @@ app.post(
 
 app.post('/eventos/:id_evento/rechazar', exigirUsuario, cargarEventoParaRevisar, rechazarAsiento)
 
-app.get('/capturas/:id_captura/foto', exigirUsuario, darEnlaceDeFoto)
+app.get('/capturas/:id_captura/archivo', exigirUsuario, darEnlaceDelArchivo)
 
 app.use(responderRutaInexistente)
 app.use(responderPedidoConError)

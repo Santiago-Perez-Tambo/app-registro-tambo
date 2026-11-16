@@ -41,7 +41,7 @@ async function llamar(ruta, metodo, datos, token) {
 }
 
 export async function enviarCaptura(captura, token) {
-  const archivoBase64 = captura.tipo_captura === 'foto' ? await leerComoBase64(captura.archivo) : null
+  const archivoBase64 = captura.archivo ? await leerComoBase64(captura.archivo) : null
   return llamar('/sync', 'POST', camposParaEnviar(captura, archivoBase64), token)
 }
 
@@ -83,6 +83,6 @@ export function reinterpretarCaptura(idCaptura) {
   return pedirConSesion(`/interpretar/${idCaptura}`, 'POST', null)
 }
 
-export function pedirFoto(idCaptura) {
-  return pedirConSesion(`/capturas/${idCaptura}/foto`, 'GET', null)
+export function pedirArchivo(idCaptura) {
+  return pedirConSesion(`/capturas/${idCaptura}/archivo`, 'GET', null)
 }

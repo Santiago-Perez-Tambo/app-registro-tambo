@@ -50,7 +50,8 @@ function ResultadoBusqueda({ animales, texto }) {
 }
 
 function UltimasVacas() {
-  const [ultimas] = useState(ultimasVacas)
+  const { usuario } = useSesion()
+  const [ultimas] = useState(() => ultimasVacas(usuario.id_usuario))
   if (ultimas.length === 0) {
     return null
   }
