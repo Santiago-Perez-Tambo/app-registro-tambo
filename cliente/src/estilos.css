@@ -147,6 +147,12 @@ h1 {
   font-weight: 700;
 }
 
+.enlaces-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .enlace-menu {
   display: flex;
   align-items: center;
@@ -1084,6 +1090,7 @@ a.boton {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    gap: 8px;
     height: auto;
     padding: 8px 12px;
     border-right: none;
@@ -1095,8 +1102,20 @@ a.boton {
     display: none;
   }
 
+  .enlaces-menu {
+    flex: 1 1 0;
+    flex-direction: row;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
   .enlace-menu {
+    flex: none;
+    min-height: 44px;
+    box-sizing: border-box;
     padding: 8px 10px;
+    white-space: nowrap;
   }
 
   .pie-usuario {
@@ -1109,7 +1128,17 @@ a.boton {
     padding-top: 0;
   }
 
+  .menu-lateral .pie-usuario {
+    display: contents;
+  }
+
+  .menu-lateral .mensaje-aviso {
+    flex-basis: 100%;
+    order: 1;
+  }
+
   .menu-lateral .boton {
+    flex: none;
     width: auto;
     min-height: 48px;
     font-size: 1rem;

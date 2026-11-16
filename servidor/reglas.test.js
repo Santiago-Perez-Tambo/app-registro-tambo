@@ -226,6 +226,16 @@ test('el parto de una vaquillona la pasa a vaca en ordeñe', () => {
   assert.equal(animal.estado_reproductivo, 'vacía')
 })
 
+test('A024: el tacto preñada de una vaquillona crea la alerta de parto pero no la de secado', () => {
+  const { animal, alertas } = confirmarEnOrden(
+    { id_animal: 1, categoria: 'vaquillona', estado_reproductivo: 'servida sin tacto' },
+    [evento(1, 'servicio', '2026-08-01'), evento(2, 'tacto', '2026-09-15', { resultado_tacto: 'preñada', edad_gestacional: 45 })],
+  )
+  assert.equal(animal.categoria, 'vaquillona')
+  assert.equal(animal.estado_reproductivo, 'preñada')
+  assert.deepEqual(vigentes(alertas), [['parto', '2027-05-11']])
+})
+
 test('un servicio cierra los avisos de vaca sin celo', () => {
   const { alertas } = confirmarEnOrden(EN_ORDENE_VACIA, [
     evento(1, 'parto', '2026-08-01'),
@@ -416,3 +426,168 @@ test('cada texto que se guarda entra en su columna', () => {
     assert.ok(valor.length <= 20, valor)
   }
 })
+
+const HOY_DEMO = '2026-11-21'
+const VAQUILLONA_SIN_SERVICIO = { id_animal: 1, categoria: 'vaquillona', estado_reproductivo: null }
+const TACTO_VACIA = { resultado_tacto: 'vacía' }
+const PRENADA_45 = { resultado_tacto: 'preñada', edad_gestacional: 45 }
+const POR_PRENEZ = { motivo_secado: 'preñez' }
+
+const CASOS_DE_DEMO = [
+  {
+    caravana: 'A100',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [
+      ['parto', -430], ['servicio', -370], ['tacto', -325, TACTO_VACIA], ['servicio', -318],
+      ['tacto', -273, PRENADA_45], ['secado', -95, POR_PRENEZ], ['parto', -35], ['servicio', -12],
+    ],
+    final: ['vaca en ordeñe', 'servida sin tacto'],
+    vigentes: [['tacto', 33]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A055',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -300], ['servicio', -218], ['tacto', -173, PRENADA_45]],
+    final: ['vaca en ordeñe', 'preñada'],
+    vigentes: [['parto', 65], ['secado', 5]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A095',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -360], ['servicio', -279], ['tacto', -234, PRENADA_45], ['secado', -56, POR_PRENEZ]],
+    final: ['vaca seca', 'preñada'],
+    vigentes: [['parto', 4]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A004',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -110], ['servicio', -45]],
+    final: ['vaca en ordeñe', 'servida sin tacto'],
+    vigentes: [['tacto', 0]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A025',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -120], ['servicio', -48]],
+    final: ['vaca en ordeñe', 'servida sin tacto'],
+    vigentes: [['tacto', -3]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A057',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -95], ['servicio', -20]],
+    final: ['vaca en ordeñe', 'servida sin tacto'],
+    vigentes: [['tacto', 25]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A013',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['servicio', -333], ['tacto', -288, PRENADA_45], ['secado', -110, POR_PRENEZ], ['parto', -50]],
+    final: ['vaca en ordeñe', 'vacía'],
+    vigentes: [['sin_celo', -5], ['inducir_celo', 10]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A065',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -62]],
+    final: ['vaca en ordeñe', 'vacía'],
+    vigentes: [['sin_celo', -17], ['inducir_celo', -2]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A077',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['servicio', -285], ['tacto', -240, PRENADA_45], ['secado', -62, POR_PRENEZ], ['parto', -2]],
+    final: ['vaca en ordeñe', 'vacía'],
+    vigentes: [['sin_celo', 43], ['inducir_celo', 58]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A000',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['servicio', -291], ['tacto', -246, PRENADA_45], ['secado', -68, POR_PRENEZ], ['parto', -8]],
+    final: ['vaca en ordeñe', 'vacía'],
+    vigentes: [['sin_celo', 37], ['inducir_celo', 52]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A029',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -180], ['servicio', -100], ['tacto', -55, { resultado_tacto: 'preñada', edad_gestacional: 70 }]],
+    final: ['vaca en ordeñe', 'preñada'],
+    vigentes: [['parto', 158], ['secado', 98]],
+    advertencias: [[2, 'servicio_no_coincidente', false]],
+  },
+  {
+    caravana: 'A023',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -130], ['servicio', -40], ['servicio', -19]],
+    final: ['vaca en ordeñe', 'servida sin tacto'],
+    vigentes: [['tacto', 26]],
+    advertencias: [[2, 'repeticion_celo', true]],
+  },
+  {
+    caravana: 'A007',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -200], ['servicio', -130], ['tacto', -85, PRENADA_45]],
+    final: ['vaca en ordeñe', 'preñada'],
+    vigentes: [['parto', 153], ['secado', 93]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A047',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -160], ['servicio', -90], ['tacto', -40, { resultado_tacto: 'preñada', edad_gestacional: 50 }]],
+    final: ['vaca en ordeñe', 'preñada'],
+    vigentes: [['parto', 193], ['secado', 133]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A125',
+    inicio: EN_ORDENE_VACIA,
+    eventos: [['parto', -330], ['servicio', -250], ['tacto', -205, PRENADA_45], ['secado', -27, POR_PRENEZ]],
+    final: ['vaca seca', 'preñada'],
+    vigentes: [['parto', 33]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A003',
+    inicio: VAQUILLONA_SIN_SERVICIO,
+    eventos: [['servicio', -30]],
+    final: ['vaquillona', 'servida sin tacto'],
+    vigentes: [['tacto', 15]],
+    advertencias: [],
+  },
+  {
+    caravana: 'A021',
+    inicio: VAQUILLONA_SIN_SERVICIO,
+    eventos: [['servicio', -100], ['tacto', -55, PRENADA_45]],
+    final: ['vaquillona', 'preñada'],
+    vigentes: [['parto', 183]],
+    advertencias: [],
+  },
+]
+
+function eventosDeDemo(lista) {
+  return lista.map(([tipo, dias, datos], posicion) => evento(posicion + 1, tipo, sumarDias(HOY_DEMO, dias), datos))
+}
+
+function vigentesEnDias(alertas) {
+  return vigentes(alertas).map(([tipo, fecha]) => [tipo, diasEntre(HOY_DEMO, fecha)])
+}
+
+for (const caso of CASOS_DE_DEMO) {
+  test(`demo, ${caso.caravana}: termina con el estado, las alertas y las advertencias de la tabla`, () => {
+    const { animal, alertas, advertencias } = confirmarEnOrden(caso.inicio, eventosDeDemo(caso.eventos))
+    assert.deepEqual([animal.categoria, animal.estado_reproductivo], caso.final)
+    assert.deepEqual(vigentesEnDias(alertas), caso.vigentes)
+    assert.deepEqual(tiposDeAdvertencia(advertencias), caso.advertencias)
+  })
+}

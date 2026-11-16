@@ -102,6 +102,8 @@ function reglaDeTactoPrenada(animal, evento, anteriores, parametros) {
     advertencias.push(nuevaAdvertencia(evento.id_evento, 'sin_fecha_parto', DETALLE_SIN_FECHA_PARTO, false))
   } else {
     alertasNuevas.push(nuevaAlerta('parto', parto))
+  }
+  if (parto !== null && animal.categoria !== 'vaquillona') {
     alertasNuevas.push(nuevaAlerta('secado', sumarDias(parto, -parametros.dias_parto_secado)))
   }
   return { cambiosDelAnimal: { estado_reproductivo: 'preñada' }, alertasNuevas, advertencias }
