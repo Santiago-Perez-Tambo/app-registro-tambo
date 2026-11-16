@@ -5,8 +5,9 @@ const TAMANO_MAXIMO_ARCHIVO = 5 * 1024 * 1024
 const INICIO_JPEG = Buffer.from([0xff, 0xd8, 0xff])
 const INICIO_WEBM = Buffer.from([0x1a, 0x45, 0xdf, 0xa3])
 const MARCA_MP4 = 'ftyp'
+const MARCA_OGG = 'OggS'
 const DURACION_MAXIMA_AUDIO = 60
-const TIPOS_DE_AUDIO = { webm: 'audio/webm', mp4: 'audio/mp4' }
+const TIPOS_DE_AUDIO = { webm: 'audio/webm', mp4: 'audio/mp4', ogg: 'audio/ogg' }
 const FORMA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const FORMA_FECHA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
 const TOLERANCIA_RELOJ = 24 * 60 * 60 * 1000
@@ -99,6 +100,9 @@ export function formatoDelAudio(archivoBase64) {
   if (primerosBytes.subarray(4, 8).toString('latin1') === MARCA_MP4) {
     return 'mp4'
   }
+  if (primerosBytes.subarray(0, 4).toString('latin1') === MARCA_OGG) {
+    return 'ogg'
+  }
   return null
 }
 
@@ -107,7 +111,7 @@ function validarAudio(archivoBase64, duracion) {
     return 'Falta el archivo del audio'
   }
   if (!formatoDelAudio(archivoBase64)) {
-    return 'El audio tiene que ser webm o mp4'
+    return 'El audio tiene que ser webm, mp4 u ogg'
   }
   if (!Number.isInteger(duracion) || duracion < 1 || duracion > DURACION_MAXIMA_AUDIO) {
     return `La duración del audio tiene que ser de 1 a ${DURACION_MAXIMA_AUDIO} segundos`

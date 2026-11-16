@@ -30,6 +30,7 @@ const DIAS_DEL_ESTABLECIMIENTO =
   'dias_servicio_tacto, dias_parto_secado, dias_calostro, dias_lactancia_primer_celo, dias_lactancia_induccion'
 const origenPermitido = process.env.ORIGEN_PERMITIDO
 const puerto = process.env.PORT || 3000
+const capturasEnCurso = new Set()
 
 if (!origenPermitido) {
   console.error('Falta ORIGEN_PERMITIDO')
@@ -115,8 +116,17 @@ async function recibirCaptura(pedido, respuesta) {
   }
 }
 
+async function interpretarUnaVez(captura, archivoBase64) {
+  capturasEnCurso.add(captura.id_captura)
+  try {
+    return await interpretarCaptura(captura, archivoBase64)
+  } finally {
+    capturasEnCurso.delete(captura.id_captura)
+  }
+}
+
 function interpretarSinEsperar(captura, archivoBase64) {
-  interpretarCaptura(captura, archivoBase64).catch((error) => {
+  interpretarUnaVez(captura, archivoBase64).catch((error) => {
     console.error(`No se pudo interpretar la captura ${captura.id_captura}`, error)
   })
 }
@@ -160,7 +170,10 @@ async function volverAInterpretar(pedido, respuesta) {
     if (yaFueRevisada(captura)) {
       return respuesta.status(409).json({ error: AVISO_YA_REVISADO })
     }
-    const idEvento = await interpretarCaptura(captura, null)
+    if (capturasEnCurso.has(id_captura)) {
+      return respuesta.status(409).json({ error: 'Se está interpretando. Esperá unos segundos.' })
+    }
+    const idEvento = await interpretarUnaVez(captura, null)
     respuesta.json({ interpretada: true, id_evento: idEvento })
   } catch (error) {
     console.error(error)
@@ -402,7 +415,7 @@ function responderRutaInexistente(pedido, respuesta) {
 }
 
 function responderPedidoConError(error, pedido, respuesta, seguir) {
-  console.error(error)
+  console.error(`Pedido con error: ${error.type ?? 'sin tipo'}: ${error.message}`)
   if (error.type === 'entity.too.large') {
     return respuesta.status(413).json({ error: 'La captura es demasiado grande' })
   }

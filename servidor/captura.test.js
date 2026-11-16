@@ -70,6 +70,12 @@ function audioMp4(tamano) {
   return audio.toString('base64')
 }
 
+function audioOgg(tamano) {
+  const audio = Buffer.alloc(tamano)
+  audio.write('OggS', 0, 'latin1')
+  return audio.toString('base64')
+}
+
 function capturaDeAudio(cambios) {
   return capturaDeTexto({
     tipo_captura: 'audio',
@@ -204,10 +210,23 @@ test('el formato del audio sale de los primeros bytes', () => {
   assert.equal(formatoDelAudio(fotoJpeg(100)), null)
 })
 
-test('un audio que por dentro no es webm ni mp4 se rechaza', () => {
+test('un audio ogg, como el que graba Firefox, no tiene error', () => {
+  assert.equal(formatoDelAudio(audioOgg(100)), 'ogg')
+  assert.equal(validarCaptura(capturaDeAudio({ archivo_base64: audioOgg(100) })), null)
+})
+
+test('la ruta de un audio ogg termina en .ogg', () => {
+  assert.equal(rutaDelArchivo(1, capturaDeAudio({ archivo_base64: audioOgg(100) })), `1/${ID_CAPTURA}-7s.ogg`)
+})
+
+test('el tipo de un audio ogg es audio/ogg', () => {
+  assert.equal(tipoDelArchivo(`1/${ID_CAPTURA}-7s.ogg`), 'audio/ogg')
+})
+
+test('un audio que por dentro no es webm, mp4 ni ogg se rechaza', () => {
   assert.equal(
     validarCaptura(capturaDeAudio({ archivo_base64: fotoJpeg(100) })),
-    'El audio tiene que ser webm o mp4',
+    'El audio tiene que ser webm, mp4 u ogg',
   )
 })
 
