@@ -22,9 +22,9 @@ Una aplicación web que el tambero usa en el lote, aun sin señal, para registra
 
 - Aplicación publicada: https://app-registro-tambo.vercel.app
 - Repositorio: https://github.com/Santiago-Perez-Tambo/app-registro-tambo
-- Versión entregada: etiqueta `v1.0`
+- Versión entregada: etiqueta `v1.0.1`
 
-El servidor de la demostración se duerme cuando pasa un rato sin uso. La primera acción puede tardar hasta un minuto y la aplicación lo avisa en pantalla.
+El servidor de la demostración se duerme cuando pasa un rato sin uso. La primera acción puede tardar hasta un minuto.
 
 ## Instalar la aplicación en el celular
 
@@ -52,7 +52,7 @@ Queda un ícono llamado "Mi tambo". La primera vez hay que entrar con señal y e
 
 ## Requisitos
 
-- Node.js 22 o superior, con npm.
+- Node.js 22.12 o superior, con npm.
 - Un proyecto de Supabase. Alcanza con el plan gratuito.
 - Una clave de la API de Claude (Anthropic). Sin ella las capturas quedan "Sin interpretar".
 - Una clave de la API de OpenAI. Sin ella los audios quedan sin transcribir.
@@ -136,7 +136,7 @@ Corre 120 pruebas.
 
 ## Usuarios de demostración
 
-La aplicación publicada tiene un establecimiento de demostración con tres usuarios, uno por rol. Los correos y las contraseñas están en el README de la carpeta de entrega, no en este repositorio.
+La aplicación publicada tiene un establecimiento de demostración con tres usuarios, uno por rol. Las contraseñas están en el README de la carpeta de entrega, no en este repositorio.
 
 ## Decisiones de diseño
 
@@ -165,5 +165,5 @@ Quedan para la defensa oral:
 - HU-012, descarte, venta o muerte.
 - HU-013, producción por retiro de leche.
 - HU-014, control lechero por fecha.
-- HU-017, advertencias sobre eventos que pueden afectar una preñez.
+- HU-017, advertencias sobre eventos que pueden afectar una preñez. Ya se guarda y se muestra en la historia la advertencia por un servicio sobre una vaca preñada; falta avisar antes de confirmar.
 - HU-018, la pantalla de parámetros del establecimiento.
