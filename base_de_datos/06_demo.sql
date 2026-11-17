@@ -1,14 +1,14 @@
 BEGIN;
 
 CREATE TEMP TABLE demo_hoy ON COMMIT DROP AS
-SELECT (now() AT TIME ZONE 'America/Argentina/Cordoba')::date AS hoy,
-       date_trunc('second', now() AT TIME ZONE 'America/Argentina/Cordoba') AS ahora;
+SELECT ahora::date AS hoy, ahora
+FROM (SELECT date_trunc('second', now() AT TIME ZONE 'America/Argentina/Cordoba') AS ahora) AS momento_base;
 
 CREATE TEMP TABLE demo_usuario (correo varchar(120), nombre varchar(80), rol varchar(20)) ON COMMIT DROP;
 INSERT INTO demo_usuario VALUES
-  ('propi@tambo.test', 'Propietario demo', 'propietario'),
-  ('tamb@tambo.test', 'Tambero demo', 'tambero'),
-  ('vet@tambo.test', 'Veterinario demo', 'asesor');
+  ('caepropietario@tambo.test', 'Propietario demo', 'propietario'),
+  ('caetambero@tambo.test', 'Tambero demo', 'tambero'),
+  ('caeasesor@tambo.test', 'Veterinario demo', 'asesor');
 
 DO $$
 DECLARE
@@ -57,6 +57,12 @@ WHERE id_animal IN (SELECT id_animal FROM animal WHERE id_establecimiento = 2);
 DELETE FROM captura
 WHERE id_animal IN (SELECT id_animal FROM animal WHERE id_establecimiento = 2);
 
+DELETE FROM usuario us
+WHERE us.id_establecimiento = 2
+  AND NOT EXISTS (SELECT 1 FROM demo_usuario d
+                  JOIN auth.users u ON u.email = d.correo
+                  WHERE u.id = us.id_auth);
+
 DELETE FROM animal WHERE id_establecimiento = 2;
 
 INSERT INTO animal (id_establecimiento, caravana, categoria, estado_reproductivo) VALUES
@@ -66,82 +72,30 @@ INSERT INTO animal (id_establecimiento, caravana, categoria, estado_reproductivo
   (2, 'A057', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A004', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A025', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A091', 'vaca seca', 'servida sin tacto'),
   (2, 'A095', 'vaca seca', 'preñada'),
-  (2, 'A017', 'vaca seca', 'servida sin tacto'),
   (2, 'A055', 'vaca en ordeñe', 'preñada'),
   (2, 'A029', 'vaca en ordeñe', 'preñada'),
   (2, 'A023', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A058', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A088', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A090', 'vaca en ordeñe', 'preñada'),
-  (2, 'A089', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A032', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A007', 'vaca en ordeñe', 'preñada'),
-  (2, 'A031', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A012', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A047', 'vaca en ordeñe', 'preñada'),
-  (2, 'A169', 'vaca en ordeñe', 'preñada'),
-  (2, 'A011', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A037', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A008', 'vaca en ordeñe', 'vacía'),
-  (2, 'A076', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A035', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A081', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A124', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A000', 'vaca en ordeñe', 'vacía'),
-  (2, 'A127', 'vaca en ordeñe', 'preñada'),
-  (2, 'A131', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A125', 'vaca seca', 'preñada'),
-  (2, 'A086', 'vaca en ordeñe', 'servida sin tacto'),
   (2, 'A014', 'vaca en ordeñe', 'preñada'),
   (2, 'A138', 'vaca en ordeñe', 'vacía'),
   (2, 'A065', 'vaca en ordeñe', 'vacía'),
-  (2, 'A016', 'vaca en ordeñe', 'preñada'),
   (2, 'A077', 'vaca en ordeñe', 'vacía'),
-  (2, 'A048', 'vaca en ordeñe', 'servida sin tacto'),
   (2, '3946', 'vaca en ordeñe', 'vacía'),
-  (2, 'A015', 'vaca seca', 'preñada'),
-  (2, 'A028', 'vaca en ordeñe', 'preñada'),
-  (2, 'A082', 'vaca en ordeñe', 'servida sin tacto'),
-  (2, 'A030', 'vaca seca', 'preñada'),
   (2, 'A013', 'vaca en ordeñe', 'vacía'),
   (2, 'A104', 'vaca seca', 'preñada'),
   (2, 'A003', 'vaquillona', 'servida sin tacto'),
   (2, 'A021', 'vaquillona', 'preñada'),
-  (2, 'A024', 'vaquillona', 'servida sin tacto'),
-  (2, 'A078', 'vaquillona', 'servida sin tacto'),
-  (2, 'A085', 'vaquillona', 'servida sin tacto'),
-  (2, 'A136', 'vaquillona', NULL),
-  (2, 'A137', 'vaquillona', NULL),
-  (2, 'A141', 'vaquillona', NULL),
-  (2, 'A142', 'vaquillona', NULL),
-  (2, 'A145', 'vaquillona', NULL),
-  (2, 'A147', 'vaquillona', 'servida sin tacto'),
-  (2, 'A171', 'vaquillona', 'servida sin tacto'),
-  (2, 'A168', 'vaquillona', 'servida sin tacto'),
-  (2, 'A158', 'vaquillona', NULL),
-  (2, 'A019', 'vaquillona', 'servida sin tacto'),
-  (2, 'A079', 'vaquillona', 'servida sin tacto'),
-  (2, 'A128', 'vaquillona', 'servida sin tacto'),
-  (2, 'A135', 'vaquillona', 'servida sin tacto'),
-  (2, 'A080', 'vaquillona', 'servida sin tacto'),
-  (2, 'A075', 'vaquillona', 'servida sin tacto'),
-  (2, '3962', 'vaca seca', 'preñada'),
-  (2, 'A170', 'vaquillona', 'servida sin tacto'),
-  (2, 'A172', 'vaquillona', 'servida sin tacto'),
-  (2, 'A174', 'vaquillona', 'preñada'),
-  (2, 'A018', 'vaquillona', 'servida sin tacto'),
-  (2, 'A148', 'vaquillona', 'servida sin tacto');
+  (2, 'A136', 'vaquillona', NULL);
 
 UPDATE animal AS a SET fecha_nacimiento = v.nacimiento::date, id_madre = m.id_animal
 FROM (VALUES
-  ('A158', '2025-06-07', NULL),
-  ('A147', '2025-01-01', 'A029'),
-  ('A146', '2024-12-02', 'A047'),
-  ('A145', '2024-09-29', 'A088'),
-  ('A142', '2024-08-10', 'A035'),
-  ('A141', '2024-08-05', 'A104')
+  ('A146', '2024-12-02', 'A047')
 ) AS v(caravana, nacimiento, madre)
 LEFT JOIN animal AS m ON m.caravana = v.madre AND m.id_establecimiento = 2
 WHERE a.caravana = v.caravana AND a.id_establecimiento = 2;
@@ -221,7 +175,7 @@ INSERT INTO demo_evento (caravana, dias, hora, cargo, tipo_evento, tipo_servicio
   ('A021', -55, '10:15', 'asesor', 'tacto', null, null, 'preñada', 45, null, null, 'tacto preñada de 45 días', 'confirmada'),
   ('A008', 0, null, 'tambero', 'servicio', 'inseminación', '512', null, null, null, null, 'inseminada hoy con el toro 512', 'interpretada'),
   ('A138', 0, null, 'tambero', 'servicio', 'inseminación', null, null, null, null, null, 'inseminada hoy, la pajuela no se lee bien, 51 y algo', 'interpretada'),
-  ('A090', 0, null, 'tambero', 'secado', null, null, null, null, 'preñez', null, 'secamos la 90 y la 14, las dos por preñez', 'interpretada');
+  ('A090', 0, null, 'tambero', 'secado', null, null, null, null, 'preñez', null, 'se secó la 14 por preñez', 'interpretada');
 
 UPDATE demo_evento d SET fecha_hora = h.hoy + d.dias + d.hora
 FROM demo_hoy h
